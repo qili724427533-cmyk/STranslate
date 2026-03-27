@@ -9,7 +9,7 @@ use crate::commands::{
 
 fn main() {
     let matches = Command::new("z_stranslate_host")
-        .version("1.0.2")
+        .version("1.0.3")
         .author("ZGGSONG <zggsong@foxmail.com>")
         .about("程序更新和后台启动工具")
         .subcommand(
@@ -96,6 +96,21 @@ fn main() {
                         .value_name("SECONDS")
                         .help("启动延迟（秒）")
                         .default_value("0")
+                        .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("wait-pid")
+                        .long("wait-pid")
+                        .value_name("PID")
+                        .help("启动前等待退出的进程ID")
+                        .value_parser(clap::value_parser!(u32)),
+                )
+                .arg(
+                    Arg::new("wait-timeout")
+                        .long("wait-timeout")
+                        .value_name("SECONDS")
+                        .help("等待进程退出超时时间（秒）")
+                        .default_value("10")
                         .value_parser(clap::value_parser!(u64)),
                 )
                 .arg(

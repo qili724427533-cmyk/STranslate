@@ -9,7 +9,14 @@ namespace STranslate.Helpers;
 
 internal class UACHelper
 {
-    public static void Run(StartMode mode, int delay = 0)   // seconds
+    /// <summary>
+    /// 使用 Host 进程按指定模式拉起程序，可选等待旧进程退出后再启动。
+    /// </summary>
+    /// <param name="mode">启动模式。</param>
+    /// <param name="delay">启动延时（秒）。</param>
+    /// <param name="waitPid">等待退出的旧进程 PID。</param>
+    /// <param name="waitTimeoutSec">等待旧进程退出超时时间（秒）。</param>
+    public static void Run(StartMode mode, int delay = 0, int? waitPid = null, int waitTimeoutSec = 6)
     {
         var modeStr = mode switch
         {
@@ -30,6 +37,12 @@ internal class UACHelper
         if (delay > 0)
         {
             args = [.. args, "-d", delay.ToString()];
+        }
+
+        if (waitPid is > 0)
+        {
+            var normalizedTimeoutSec = waitTimeoutSec > 0 ? waitTimeoutSec : 1;
+            args = [.. args, "--wait-pid", waitPid.Value.ToString(), "--wait-timeout", normalizedTimeoutSec.ToString()];
         }
 
         Utilities.ExecuteProgram(DataLocation.HostExePath, args);
