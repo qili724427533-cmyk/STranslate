@@ -165,7 +165,7 @@ public class Main : LlmTranslatePluginBase
         {
             Headers = new Dictionary<string, string>
             {
-                { "authorization", "Bearer " + BigModelAuthenication.GenerateToken(key, 60) }
+                { "authorization", "Bearer " + BigModelAuthenication.GenerateToken(key, 3600) }
             }
         };
 
