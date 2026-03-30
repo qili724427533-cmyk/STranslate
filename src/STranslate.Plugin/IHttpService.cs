@@ -181,6 +181,20 @@ public interface IHttpService
     /// <returns></returns>
     Task StreamPostAsync(string url, object content, Action<string> onDataReceived, Options? options = null, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// 流式Post请求（IAsyncEnumerable模式）
+    /// </summary>
+    /// <param name="url">请求URL</param>
+    /// <param name="content">请求体</param>
+    /// <param name="options">请求选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>异步流，每项是一行SSE数据</returns>
+    IAsyncEnumerable<string> StreamPostAsyncEnumerable(
+        string url,
+        object content,
+        Options? options = null,
+        CancellationToken cancellationToken = default);
+
     // 文件下载
     /// <summary>
     /// 下载文件
@@ -292,7 +306,23 @@ public interface IHttpService
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     Task StreamPostAsync(string serviceName, string url, object content, Action<string> onDataReceived, Options? options = null, CancellationToken cancellationToken = default);
-    
+
+    /// <summary>
+    /// 流式Post请求（IAsyncEnumerable模式）
+    /// </summary>
+    /// <param name="serviceName">服务名称</param>
+    /// <param name="url">请求URL</param>
+    /// <param name="content">请求体</param>
+    /// <param name="options">请求选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>异步流，每项是一行SSE数据</returns>
+    IAsyncEnumerable<string> StreamPostAsyncEnumerable(
+        string serviceName,
+        string url,
+        object content,
+        Options? options = null,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// 下载文件
     /// </summary>
