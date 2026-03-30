@@ -16,6 +16,13 @@
     d:DesignWidth="800"
     mc:Ignorable="d">
 
+    <ui:Page.InputBindings>
+        <KeyBinding
+            Key="R"
+            Command="{Binding ReorderEnabledServicesCommand}"
+            Modifiers="Ctrl+Shift" />
+    </ui:Page.InputBindings>
+
     <ui:Page.Resources>
         <control:ReplaceServiceDropHandler x:Key="ReplaceDropHandler" />
         <control:ImTranServiceDropHandler x:Key="ImTranDropHandler" />
