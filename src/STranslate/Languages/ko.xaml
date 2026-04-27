@@ -68,8 +68,8 @@
     <sys:String x:Key="General_AutoTranslateDelayDescription">입력 후 대기 시간, 단위: 밀리초.</sys:String>
     <sys:String x:Key="General_LineBreakHandleType">단어 선택 줄 바꿈 처리</sys:String>
     <sys:String x:Key="General_LineBreakHandleTypeDescription" xml:space="preserve">드래그 번역, 스크린샷 번역, 클립보드, 정적 OCR 단어 선택 시 줄 바꿈 처리를 포함합니다.&#10;「불필요한 줄 바꿈 제거」는 주로 PDF 단어 선택 시 사용되며, 불필요한 줄 바꿈을 제거하지만 PDF가 아닌 경우 영향을 줄 수 있습니다.</sys:String>
-    <sys:String x:Key="General_SelectedTextFetchTimeout">텍스트 가져오기 대기 시간</sys:String>
-    <sys:String x:Key="General_SelectedTextFetchTimeoutDescription">복사 시뮬레이션 후 클립보드에 텍스트가 기록될 때까지 기다리는 최대 시간입니다. 단위: 밀리초. 일부 PDF 앱의 기록이 느리면 값을 높이세요.</sys:String>
+    <sys:String x:Key="General_SelectedTextFetchTimeout">텍스트 가져오기 시간 초과</sys:String>
+    <sys:String x:Key="General_SelectedTextFetchTimeoutDescription">복사 시뮬레이션 후 새 클립보드 텍스트를 폴링하는 시간 초과 값입니다. 단위: 밀리초. 텍스트가 업데이트되면 즉시 반환되며, 일부 PDF 앱의 업데이트가 느리면 값을 높이세요.</sys:String>
     <sys:String x:Key="General_SelectedTextFetchTimeoutPlaceholder">500</sys:String>
     <sys:String x:Key="General_CrosswordFetchFailedFallbackTarget">드래그 번역 실패 시 복귀 대상</sys:String>
     <sys:String x:Key="General_CrosswordFetchFailedFallbackTargetDescription">선택 텍스트 가져오기에 실패했을 때 입력 번역으로 전환할지, 메인 창만 표시할지 선택합니다.</sys:String>

@@ -71,8 +71,8 @@
     <sys:String x:Key="General_AutoTranslateDelayDescription">輸入內容等待時間，單位：毫秒。</sys:String>
     <sys:String x:Key="General_LineBreakHandleType">取詞換行處理</sys:String>
     <sys:String x:Key="General_LineBreakHandleTypeDescription" xml:space="preserve">包括劃詞、截圖翻譯、剪貼簿、靜默 OCR 取詞場景的換行處理。&#10;「移除多餘換行」主要針對 PDF 取詞場景，移除多餘的換行與斷句，但對非 PDF 取詞可能會有影響。</sys:String>
-    <sys:String x:Key="General_SelectedTextFetchTimeout">取詞等待時間</sys:String>
-    <sys:String x:Key="General_SelectedTextFetchTimeoutDescription">模擬複製後等待剪貼簿寫入文字的最長時間，單位：毫秒。部分 PDF 軟體寫入較慢時可適當調高。</sys:String>
+    <sys:String x:Key="General_SelectedTextFetchTimeout">取詞逾時時間</sys:String>
+    <sys:String x:Key="General_SelectedTextFetchTimeoutDescription">模擬複製後輪詢剪貼簿新文字的逾時時間，單位：毫秒。寫入成功會立即返回；部分 PDF 軟體寫入較慢時可適當調高。</sys:String>
     <sys:String x:Key="General_SelectedTextFetchTimeoutPlaceholder">500</sys:String>
     <sys:String x:Key="General_CrosswordFetchFailedFallbackTarget">劃詞取詞失敗回退目標</sys:String>
     <sys:String x:Key="General_CrosswordFetchFailedFallbackTargetDescription">劃詞取詞失敗後，選擇回退到輸入翻譯或僅顯示主介面。</sys:String>
