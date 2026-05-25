@@ -25,6 +25,7 @@ public class HotkeyMapper
 
     private static UnhookWindowsHookExSafeHandle? _hookHandle;
     private static HOOKPROC? _hookProc;
+    private static readonly Lock _hookStateLock = new();
     private static readonly HashSet<Key> _suppressedKeys = [];
     private static readonly HashSet<Key> _pressedKeys = [];
     private static readonly Dictionary<Key, (Action OnPress, Action OnRelease)> _holdKeyActions = [];
@@ -47,10 +48,6 @@ public class HotkeyMapper
     /// <returns></returns>
     internal static bool SetHotkey(string hotkeyStr, Action action)
     {
-        // 避免重复注册相同热键导致异常
-        if (_holdKeyActions.Keys.ToList().Any(x => hotkeyStr.Contains(x.ToString())))
-            return false;
-
         var hotkey = new HotkeyModel(hotkeyStr);
         return SetHotkey(hotkey, action);
     }
@@ -64,6 +61,10 @@ public class HotkeyMapper
         if (string.IsNullOrEmpty(hotkeyStr))
             return true;
         //_logger.LogInformation("Registering hotkey: {HotkeyStr}", hotkeyStr);
+
+        // 避免 NHotkey 注册和低级钩子的按住键使用同一个主键。
+        if (IsRegisteredHoldKey(hotkey.CharKey))
+            return false;
 
         try
         {
@@ -160,7 +161,7 @@ public class HotkeyMapper
             _hookProc = null;
 
             HoldKeyClear();
-            _pressedKeys.Clear();
+            ClearPressedKeys();
             _logger.LogInformation("Global keyboard monitoring stopped");
         }
         catch (Exception e)
@@ -177,18 +178,47 @@ public class HotkeyMapper
     /// <param name="onRelease">抬起时执行的操作</param>
     public static void RegisterHoldKey(Key key, Action onPress, Action onRelease)
     {
-        HoldKeyClear();
-
-        _holdKeyActions[key] = (onPress, onRelease);
-        _suppressedKeys.Add(key);
+        lock (_hookStateLock)
+        {
+            HoldKeyClearCore();
+            _holdKeyActions[key] = (onPress, onRelease);
+            _suppressedKeys.Add(key);
+        }
 
         _logger.LogInformation("Registered hold key action for {Key}", key);
     }
 
     private static void HoldKeyClear()
     {
+        lock (_hookStateLock)
+        {
+            HoldKeyClearCore();
+        }
+    }
+
+    private static void HoldKeyClearCore()
+    {
         _holdKeyActions.Clear();
         _suppressedKeys.Clear();
+    }
+
+    private static void ClearPressedKeys()
+    {
+        lock (_hookStateLock)
+        {
+            _pressedKeys.Clear();
+        }
+    }
+
+    private static bool IsRegisteredHoldKey(Key key)
+    {
+        if (key == Key.None)
+            return false;
+
+        lock (_hookStateLock)
+        {
+            return _holdKeyActions.ContainsKey(key);
+        }
     }
 
     private static LRESULT HookCallback(int nCode, WPARAM wParam, LPARAM lParam)
@@ -204,63 +234,80 @@ public class HotkeyMapper
 
             if (isKeyDown)
             {
-                // 如果该键已经在按下状态，忽略重复的 KeyDown 事件
-                if (!_pressedKeys.Add(key))
-                {
-                    // 如果是被拦截的键且不跳过，阻止传递
-                    if (_suppressedKeys.Contains(key) && !ShouldSkipHotkey())
-                        return new LRESULT(1); // 返回非零值阻止传递
+                bool shouldSuppress;
+                (Action OnPress, Action OnRelease)? actions;
+                bool isRepeatedKeyDown;
 
+                lock (_hookStateLock)
+                {
+                    // 如果该键已经在按下状态，忽略重复的 KeyDown 事件
+                    isRepeatedKeyDown = !_pressedKeys.Add(key);
+                    shouldSuppress = _suppressedKeys.Contains(key);
+                    actions = !isRepeatedKeyDown && _holdKeyActions.TryGetValue(key, out var holdActions)
+                        ? holdActions
+                        : null;
+                }
+
+                var shouldSkipHotkey = ShouldSkipHotkey();
+
+                if (isRepeatedKeyDown)
+                {
+                    if (shouldSuppress && !shouldSkipHotkey)
+                        return new LRESULT(1); // 返回非零值阻止传递
                     return PInvoke.CallNextHookEx(HHOOK.Null, nCode, wParam, lParam);
                 }
 
                 // 执行按住按键的 OnPress 操作
-                if (_holdKeyActions.TryGetValue(key, out var actions))
+                if (actions.HasValue && !shouldSkipHotkey)
                 {
-                    // 检查是否应该跳过热键执行
-                    if (!ShouldSkipHotkey())
+                    try
                     {
-                        try
-                        {
-                            actions.OnPress?.Invoke();
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error executing OnPress action for key {Key}", key);
-                        }
+                        actions.Value.OnPress?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error executing OnPress action for key {Key}", key);
                     }
                 }
 
                 // 如果该键在拦截列表中且不跳过，阻止其传递
-                if (_suppressedKeys.Contains(key) && !ShouldSkipHotkey())
+                if (shouldSuppress && !shouldSkipHotkey)
                 {
                     return new LRESULT(1); // 返回非零值阻止按键传递
                 }
             }
             else if (isKeyUp)
             {
-                // 从按下状态集合中移除
-                _pressedKeys.Remove(key);
+                bool shouldSuppress;
+                (Action OnPress, Action OnRelease)? actions;
+
+                lock (_hookStateLock)
+                {
+                    // 从按下状态集合中移除
+                    _pressedKeys.Remove(key);
+                    shouldSuppress = _suppressedKeys.Contains(key);
+                    actions = _holdKeyActions.TryGetValue(key, out var holdActions)
+                        ? holdActions
+                        : null;
+                }
+
+                var shouldSkipHotkey = ShouldSkipHotkey();
 
                 // 执行按住按键的 OnRelease 操作
-                if (_holdKeyActions.TryGetValue(key, out var actions))
+                if (actions.HasValue && !shouldSkipHotkey)
                 {
-                    // 检查是否应该跳过热键执行
-                    if (!ShouldSkipHotkey())
+                    try
                     {
-                        try
-                        {
-                            actions.OnRelease?.Invoke();
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error executing OnRelease action for key {Key}", key);
-                        }
+                        actions.Value.OnRelease?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error executing OnRelease action for key {Key}", key);
                     }
                 }
 
                 // 如果该键在拦截列表中且不跳过，阻止其传递
-                if (_suppressedKeys.Contains(key) && !ShouldSkipHotkey())
+                if (shouldSuppress && !shouldSkipHotkey)
                 {
                     return new LRESULT(1); // 返回非零值阻止按键传递
                 }
