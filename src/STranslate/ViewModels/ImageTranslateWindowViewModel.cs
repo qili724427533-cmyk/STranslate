@@ -164,7 +164,13 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
 
             var ocrSvc = _ocrService.GetImageTranslateOcrSvcOrDefault();
             if (ocrSvc == null)
+            {
+                Helper.PromptConfigureService(
+                    _i18n.GetTranslation("ImageTranslateOcrServiceNotFoundTitle"),
+                    _i18n.GetTranslation("ImageTranslateOcrServiceNotFoundMessage"),
+                    nameof(OcrPage));
                 return;
+            }
 
             var data = Utilities.ToBytes(bitmap, Settings.GetImageFormat());
             _lastOcrResult = await ocrSvc.RecognizeAsync(new OcrRequest(data, Settings.OcrLanguage), cancellationToken);
