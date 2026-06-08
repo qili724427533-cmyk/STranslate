@@ -101,6 +101,20 @@
                             SelectedValue="{Binding Settings.Language}"
                             SelectedValuePath="LanguageCode" />
                     </ui:SettingsCard>
+
+                    <ui:SettingsCard
+                        Description="{DynamicResource General_ColorThemeDescription}"
+                        Header="{DynamicResource General_ColorTheme}">
+                        <ui:SettingsCard.HeaderIcon>
+                            <ui:FontIcon Icon="{x:Static ui:FluentSystemIcons.Color_20_Regular}" />
+                        </ui:SettingsCard.HeaderIcon>
+                        <ComboBox
+                            MaxWidth="200"
+                            DisplayMemberPath="Display"
+                            ItemsSource="{Binding DataProvider.ColorSchemes}"
+                            SelectedValue="{Binding Settings.ColorScheme}"
+                            SelectedValuePath="Value" />
+                    </ui:SettingsCard>
                 </ikw:SimpleStackPanel>
             </ui:ScrollViewerEx>
 

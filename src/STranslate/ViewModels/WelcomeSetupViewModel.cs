@@ -28,6 +28,7 @@ public partial class WelcomeSetupViewModel : ObservableObject, IDisposable
         Settings settings,
         HotkeySettings hotkeySettings,
         ServiceSettings serviceSettings,
+        DataProvider dataProvider,
         Internationalization i18n,
         TranslateService translateService,
         OcrService ocrService,
@@ -36,6 +37,7 @@ public partial class WelcomeSetupViewModel : ObservableObject, IDisposable
         Settings = settings;
         HotkeySettings = hotkeySettings;
         ServiceSettings = serviceSettings;
+        DataProvider = dataProvider;
         Languages = i18n.LoadAvailableLanguages();
         TranslateService = translateService;
         OcrService = ocrService;
@@ -67,6 +69,8 @@ public partial class WelcomeSetupViewModel : ObservableObject, IDisposable
     public HotkeySettings HotkeySettings { get; }
 
     public ServiceSettings ServiceSettings { get; }
+
+    public DataProvider DataProvider { get; }
 
     public List<I18nPair> Languages { get; }
 
