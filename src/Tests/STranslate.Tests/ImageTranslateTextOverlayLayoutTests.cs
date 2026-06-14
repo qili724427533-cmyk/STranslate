@@ -1,6 +1,7 @@
 using STranslate.Core;
 using STranslate.Plugin;
 using System.Windows;
+using System.Windows.Media;
 
 namespace STranslate.Tests;
 
@@ -35,7 +36,7 @@ public class ImageTranslateTextOverlayLayoutTests
     }
 
     [Fact]
-    public void EraseRectsExpandLineBoxesAndUseOpaqueBackground()
+    public void EraseRectsExpandLineBoxesAndUseAdaptiveOverlayBackground()
     {
         var block = Block(
             Box(0, 0, 200, 60),
@@ -43,7 +44,8 @@ public class ImageTranslateTextOverlayLayoutTests
 
         var plan = CreatePlan(block, new Rect(0, 0, 200, 60), (_, _) => new Size(10, 10));
 
-        Assert.Equal(255, plan.BackgroundColor.A);
+        Assert.Equal(Color.FromArgb(210, 255, 255, 255), plan.OverlayBackgroundColor);
+        Assert.Equal(Colors.Black, plan.ForegroundColor);
         Assert.Single(plan.EraseRects);
         Assert.Equal(8, plan.EraseRects[0].Left, precision: 3);
         Assert.Equal(16.4, plan.EraseRects[0].Top, precision: 3);
@@ -66,6 +68,7 @@ public class ImageTranslateTextOverlayLayoutTests
         Assert.Equal(27.2, plan.TextClipRect.Height, precision: 3);
         AssertCovers(plan.TextClipRect, plan.BoundingRect);
         AssertCovers(plan.TextClipRect, plan.EraseRects[0]);
+        AssertCovers(plan.OverlayRect, plan.TextClipRect);
     }
 
     [Fact]
@@ -103,6 +106,7 @@ public class ImageTranslateTextOverlayLayoutTests
 
         AssertCovers(plan.TextClipRect, plan.BoundingRect);
         Assert.All(plan.EraseRects, eraseRect => AssertCovers(plan.TextClipRect, eraseRect));
+        Assert.All(plan.EraseRects, eraseRect => AssertCovers(plan.OverlayRect, eraseRect));
         Assert.True(plan.TextClipRect.Top < plan.BoundingRect.Top);
         Assert.True(plan.TextClipRect.Bottom > plan.BoundingRect.Bottom);
     }
@@ -196,7 +200,73 @@ public class ImageTranslateTextOverlayLayoutTests
         Assert.False(plan.IsMultiLine);
         Assert.Equal(boundingRect, plan.EraseRects[0]);
         Assert.Equal(boundingRect, plan.TextClipRect);
-        Assert.Equal(30 * 0.96, plan.FontSize, precision: 3);
+        Assert.Equal(boundingRect, plan.OverlayRect);
+        Assert.Equal(30 * 1.08, plan.FontSize, precision: 3);
+    }
+
+    [Fact]
+    public void LightBackgroundUsesLightOverlayAndBlackText()
+    {
+        var block = Block(
+            Box(0, 0, 200, 40),
+            Box(0, 0, 180, 20));
+
+        var plan = ImageTranslateTextOverlayLayout.Create(
+            block,
+            new Rect(0, 0, 200, 40),
+            (_, _, _) => new Size(10, 10),
+            ImageTranslateBackgroundSample.Light);
+
+        Assert.Equal(Color.FromArgb(210, 255, 255, 255), plan.OverlayBackgroundColor);
+        Assert.Equal(Colors.Black, plan.ForegroundColor);
+    }
+
+    [Fact]
+    public void DarkBackgroundUsesDarkOverlayAndWhiteText()
+    {
+        var block = Block(
+            Box(0, 0, 200, 40),
+            Box(0, 0, 180, 20));
+
+        var plan = ImageTranslateTextOverlayLayout.Create(
+            block,
+            new Rect(0, 0, 200, 40),
+            (_, _, _) => new Size(10, 10),
+            ImageTranslateBackgroundSample.Dark);
+
+        Assert.Equal(Color.FromArgb(205, 0, 0, 0), plan.OverlayBackgroundColor);
+        Assert.Equal(Colors.White, plan.ForegroundColor);
+    }
+
+    [Fact]
+    public void NeutralBackgroundChoosesHigherContrastOverlay()
+    {
+        var block = Block(
+            Box(0, 0, 200, 40),
+            Box(0, 0, 180, 20));
+
+        var plan = ImageTranslateTextOverlayLayout.Create(
+            block,
+            new Rect(0, 0, 200, 40),
+            (_, _, _) => new Size(10, 10),
+            ImageTranslateBackgroundSample.Neutral);
+
+        Assert.Equal(Color.FromArgb(210, 255, 255, 255), plan.OverlayBackgroundColor);
+        Assert.Equal(Colors.Black, plan.ForegroundColor);
+    }
+
+    [Fact]
+    public void OverlayRectCoversEraseRectsAndTextClip()
+    {
+        var block = Block(
+            Box(10, 20, 180, 46),
+            Box(10, 20, 180, 20),
+            Box(10, 46, 180, 20));
+
+        var plan = CreatePlan(block, new Rect(10, 20, 180, 46), (_, _) => new Size(10, 10));
+
+        AssertCovers(plan.OverlayRect, plan.TextClipRect);
+        Assert.All(plan.EraseRects, eraseRect => AssertCovers(plan.OverlayRect, eraseRect));
     }
 
     [Theory]
@@ -215,7 +285,11 @@ public class ImageTranslateTextOverlayLayoutTests
         OcrLayoutBlock block,
         Rect boundingRect,
         Func<double, Rect, Size> measureText) =>
-        ImageTranslateTextOverlayLayout.Create(block, boundingRect, (fontSize, textRect, _) => measureText(fontSize, textRect));
+        ImageTranslateTextOverlayLayout.Create(
+            block,
+            boundingRect,
+            (fontSize, textRect, _) => measureText(fontSize, textRect),
+            ImageTranslateBackgroundSample.Light);
 
     private static void AssertCovers(Rect outer, Rect inner)
     {

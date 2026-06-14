@@ -8,6 +8,7 @@ internal sealed record ImageTranslateTextOverlayPlan(
     Rect BoundingRect,
     Rect TextRect,
     Rect TextClipRect,
+    Rect OverlayRect,
     IReadOnlyList<Rect> EraseRects,
     double FontSize,
     double LineHeight,
@@ -15,22 +16,34 @@ internal sealed record ImageTranslateTextOverlayPlan(
     int MaxLineCount,
     bool IsMultiLine,
     bool ShouldTrim,
-    Color BackgroundColor)
+    Color ForegroundColor,
+    Color OverlayBackgroundColor,
+    double CornerRadius)
 {
     internal const double MinFontSize = 6;
     internal const double MaxFontSize = 48;
 }
 
+internal readonly record struct ImageTranslateBackgroundSample(double AverageLuminance, double DarkPixelRatio)
+{
+    internal static readonly ImageTranslateBackgroundSample Light = new(0.92, 0.02);
+    internal static readonly ImageTranslateBackgroundSample Dark = new(0.08, 0.95);
+    internal static readonly ImageTranslateBackgroundSample Neutral = new(0.5, 0.45);
+}
+
 internal static class ImageTranslateTextOverlayLayout
 {
     private const double MultilineFontScale = 0.90;
-    private const double SingleLineFontScale = 0.96;
+    private const double SingleLineFontScale = 1.08;
     private const double HorizontalTextPadding = 1;
+    private static readonly Color DarkOverlayBackground = Color.FromArgb(205, 0, 0, 0);
+    private static readonly Color LightOverlayBackground = Color.FromArgb(210, 255, 255, 255);
 
     internal static ImageTranslateTextOverlayPlan Create(
         OcrLayoutBlock block,
         Rect boundingRect,
-        Func<double, Rect, bool, Size> measureText)
+        Func<double, Rect, bool, Size> measureText,
+        ImageTranslateBackgroundSample? backgroundSample = null)
     {
         var lineRects = block.LineBoxPoints
             .Select(CalculateBoundingRect)
@@ -59,11 +72,16 @@ internal static class ImageTranslateTextOverlayLayout
             ? textRect
             : new Rect(textRect.Left, textClipRect.Top, textRect.Width, textClipRect.Height);
         var (fontSize, shouldTrim) = FitFontSize(fontSizeLimit, fitRect, isMultiLine, measureText);
+        var overlayRect = textClipRect;
+        var (overlayBackgroundColor, foregroundColor) = SelectOverlayColors(
+            backgroundSample ?? ImageTranslateBackgroundSample.Light);
+        var cornerRadius = Math.Clamp(lineHeight * 0.18, 3, 8);
 
         return new ImageTranslateTextOverlayPlan(
             boundingRect,
             textRect,
             textClipRect,
+            overlayRect,
             eraseRects,
             fontSize,
             isMultiLine ? fontSize * 1.28 : 0,
@@ -71,7 +89,9 @@ internal static class ImageTranslateTextOverlayLayout
             isMultiLine ? 0 : 1,
             isMultiLine,
             shouldTrim,
-            Color.FromArgb(255, 255, 255, 255));
+            foregroundColor,
+            overlayBackgroundColor,
+            cornerRadius);
     }
 
     internal static string NormalizeOverlayText(string text)
@@ -157,6 +177,34 @@ internal static class ImageTranslateTextOverlayLayout
     private static bool Fits(Size measured, Rect textRect) =>
         measured.Width <= textRect.Width + 0.1 &&
         measured.Height <= textRect.Height + 0.1;
+
+    private static (Color Background, Color Foreground) SelectOverlayColors(ImageTranslateBackgroundSample sample)
+    {
+        if (sample.AverageLuminance >= 0.62 && sample.DarkPixelRatio < 0.55)
+            return (LightOverlayBackground, Colors.Black);
+
+        if (sample.AverageLuminance <= 0.32 || sample.DarkPixelRatio >= 0.68)
+            return (DarkOverlayBackground, Colors.White);
+
+        var darkOverlayLuminance = BlendLuminance(sample.AverageLuminance, 0, DarkOverlayBackground.A / 255d);
+        var lightOverlayLuminance = BlendLuminance(sample.AverageLuminance, 1, LightOverlayBackground.A / 255d);
+        var darkOverlayContrast = ContrastRatio(darkOverlayLuminance, 1);
+        var lightOverlayContrast = ContrastRatio(lightOverlayLuminance, 0);
+
+        return darkOverlayContrast >= lightOverlayContrast
+            ? (DarkOverlayBackground, Colors.White)
+            : (LightOverlayBackground, Colors.Black);
+    }
+
+    private static double BlendLuminance(double baseLuminance, double overlayLuminance, double overlayAlpha) =>
+        overlayLuminance * overlayAlpha + baseLuminance * (1 - overlayAlpha);
+
+    private static double ContrastRatio(double luminanceA, double luminanceB)
+    {
+        var lighter = Math.Max(luminanceA, luminanceB);
+        var darker = Math.Min(luminanceA, luminanceB);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
 
     private static List<Rect> CreateEraseRects(IReadOnlyList<Rect> lineRects, Rect boundingRect, double lineHeight)
     {
