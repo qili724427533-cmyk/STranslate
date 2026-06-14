@@ -70,11 +70,12 @@ internal static class OcrLayoutAnalyzer
 
     private static List<OcrLayoutBlock> AnalyzeRegion(LayoutRegion region, LayoutMetrics metrics)
     {
+        var regionMetrics = metrics.WithNormalLineGapFrom(region.Lines);
         var paragraphs = new List<ParagraphGroup>();
 
         foreach (var line in region.Lines.OrderBy(x => x.Bounds.Top).ThenBy(x => x.Bounds.Left))
         {
-            var target = FindBestParagraph(line, paragraphs, metrics);
+            var target = FindBestParagraph(line, paragraphs, regionMetrics);
             if (target == null)
                 paragraphs.Add(new ParagraphGroup(line));
             else
@@ -360,6 +361,9 @@ internal static class OcrLayoutAnalyzer
             return true;
         }
 
+        if (LooksLikeParagraphBreak(previous, current, metrics, verticalGap, horizontalOverlap, leftDelta))
+            return false;
+
         if (LooksLikeGridCell(previous, metrics) && LooksLikeGridCell(current, metrics))
             return false;
 
@@ -379,6 +383,39 @@ internal static class OcrLayoutAnalyzer
 
         return confidence >= MinSmartMergeConfidence;
     }
+
+    private static bool LooksLikeParagraphBreak(
+        LineSegment previous,
+        LineSegment current,
+        LayoutMetrics metrics,
+        double verticalGap,
+        double horizontalOverlap,
+        double leftDelta)
+    {
+        if (verticalGap <= GetParagraphBreakThreshold(metrics))
+            return false;
+
+        if (IsListStart(previous.Text) || IsListStart(current.Text))
+            return false;
+
+        var sameLeftEdge = leftDelta <= metrics.LineHeight * 0.8;
+        var currentIsIndented = current.Bounds.Left > previous.Bounds.Left + metrics.LineHeight * 0.8;
+        var currentReturnsToBodyLeft = current.Bounds.Left <= previous.Bounds.Left + metrics.LineHeight * 0.4;
+        var previousIsShortLine = previous.Bounds.Width <= current.Bounds.Width * 0.82;
+
+        if (EndsWithSentenceEnding(previous.Text) && (sameLeftEdge || currentIsIndented))
+            return true;
+
+        if (StartsWithUpperLatin(current.Text) && sameLeftEdge)
+            return true;
+
+        return previousIsShortLine && currentReturnsToBodyLeft && horizontalOverlap >= 0.45;
+    }
+
+    private static double GetParagraphBreakThreshold(LayoutMetrics metrics) =>
+        Math.Max(
+            metrics.LineHeight * 0.72,
+            Math.Min(metrics.NormalLineGap, metrics.LineHeight * 0.35) + metrics.LineHeight * 0.45);
 
     private static List<LineSegment> BuildLineSegments(List<LayoutItem> items)
     {
@@ -613,6 +650,33 @@ internal static class OcrLayoutAnalyzer
     private static bool HasSentenceEnding(string text) =>
         text.IndexOfAny(['.', '!', '?', ';', ':', '。', '！', '？', '；', '：']) >= 0;
 
+    private static bool EndsWithSentenceEnding(string text)
+    {
+        for (var i = text.Length - 1; i >= 0; i--)
+        {
+            var ch = text[i];
+            if (char.IsWhiteSpace(ch) || ch is '"' or '\'' or ')' or ']' or '}' or '”' or '’')
+                continue;
+
+            return ch is '.' or '!' or '?' or ';' or ':' or '。' or '！' or '？' or '；' or '：';
+        }
+
+        return false;
+    }
+
+    private static bool StartsWithUpperLatin(string text)
+    {
+        foreach (var ch in text.TrimStart())
+        {
+            if (ch is '"' or '\'' or '(' or '[' or '{' or '“' or '‘')
+                continue;
+
+            return ch is >= 'A' and <= 'Z';
+        }
+
+        return false;
+    }
+
     private static bool IsLatinLetter(char ch) =>
         (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 
@@ -775,10 +839,51 @@ internal static class OcrLayoutAnalyzer
         }
     }
 
-    private readonly record struct LayoutMetrics(double LineHeight)
+    private readonly record struct LayoutMetrics(double LineHeight, double NormalLineGap)
     {
         internal static LayoutMetrics From(IReadOnlyList<LineSegment> lines) =>
-            new(Math.Max(1, Median(lines.Select(x => x.Bounds.Height))));
+            Create(lines);
+
+        internal LayoutMetrics WithNormalLineGapFrom(IReadOnlyList<LineSegment> lines) =>
+            this with { NormalLineGap = EstimateNormalLineGap(lines, LineHeight) };
+
+        private static LayoutMetrics Create(IReadOnlyList<LineSegment> lines)
+        {
+            var lineHeight = Math.Max(1, Median(lines.Select(x => x.Bounds.Height)));
+            return new(lineHeight, EstimateNormalLineGap(lines, lineHeight));
+        }
+
+        private static double EstimateNormalLineGap(IReadOnlyList<LineSegment> lines, double lineHeight)
+        {
+            if (lines.Count < 2)
+                return 0;
+
+            var sorted = lines
+                .OrderBy(x => x.Bounds.Top)
+                .ThenBy(x => x.Bounds.Left)
+                .ToList();
+            var gaps = new List<double>();
+
+            for (var i = 1; i < sorted.Count; i++)
+            {
+                var previous = sorted[i - 1];
+                var current = sorted[i];
+                if (VerticalOverlapRatio(previous.Bounds, current.Bounds) > 0.25)
+                    continue;
+
+                gaps.Add(VerticalGap(previous.Bounds, current.Bounds));
+            }
+
+            if (gaps.Count == 0)
+                return 0;
+
+            var maxNormalGap = lineHeight * 0.65;
+            var normalGaps = gaps.Where(x => x <= maxNormalGap).ToList();
+            if (normalGaps.Count == 0)
+                normalGaps = gaps.Order().Take(Math.Max(1, gaps.Count / 2)).ToList();
+
+            return Median(normalGaps);
+        }
     }
 
     private readonly record struct Bounds(double Left, double Top, double Right, double Bottom)

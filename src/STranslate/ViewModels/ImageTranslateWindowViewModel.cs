@@ -228,7 +228,11 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
                 var result = new TranslateResult();
                 await tranSvc.TranslateAsync(new TranslateRequest(block.Text, source, target), result, cancellationToken);
                 if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Text))
-                    block.Text = result.Text;
+                {
+                    var normalizedText = ImageTranslateTextOverlayLayout.NormalizeOverlayText(result.Text);
+                    if (!string.IsNullOrWhiteSpace(normalizedText))
+                        block.Text = normalizedText;
+                }
             });
 
             _lastOcrResult.OcrContents.Clear();
@@ -671,15 +675,27 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
             // 绘制原始图像
             drawingContext.DrawImage(image, new Rect(0, 0, image.PixelWidth, image.PixelHeight));
 
-            // 为每个文本块创建覆盖层并绘制翻译文本
-            foreach (var item in layoutBlocks)
-            {
-                if (item.BoxPoints.Count == 0 || string.IsNullOrEmpty(item.Text))
-                    continue;
+            var textBrush = new SolidColorBrush(Colors.Black);
+            textBrush.Freeze();
+            var overlays = layoutBlocks
+                .Where(item => item.BoxPoints.Count > 0 && !string.IsNullOrEmpty(item.Text))
+                .Select(item => CreateTranslatedTextOverlay(item, pixelsPerDip, textBrush))
+                .Where(item => item != null)
+                .Select(item => item!)
+                .ToList();
 
-                // 传递 pixelsPerDip 以确保文字渲染清晰度
-                DrawTranslatedTextOverlay(drawingContext, item, pixelsPerDip);
+            // 先统一擦除原文，再绘制译文，避免后续白底覆盖前面已经画好的译文。
+            foreach (var overlay in overlays)
+            {
+                var backgroundBrush = new SolidColorBrush(overlay.Plan.BackgroundColor);
+                backgroundBrush.Freeze();
+
+                foreach (var eraseRect in overlay.Plan.EraseRects)
+                    drawingContext.DrawRectangle(backgroundBrush, null, eraseRect);
             }
+
+            foreach (var overlay in overlays)
+                DrawTranslatedTextOverlay(drawingContext, overlay);
             
             // 恢复变换
             drawingContext.Pop();
@@ -706,48 +722,66 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
     /// <param name="drawingContext">绘图上下文</param>
     /// <param name="content">包含翻译文本和位置信息的内容</param>
     /// <param name="pixelsPerDip">DPI缩放比例</param>
-    private void DrawTranslatedTextOverlay(DrawingContext drawingContext, OcrLayoutBlock content, double pixelsPerDip)
+    private TranslatedTextOverlay? CreateTranslatedTextOverlay(
+        OcrLayoutBlock content,
+        double pixelsPerDip,
+        Brush textBrush)
     {
         var boundingRect = CalculateBoundingRect(content.BoxPoints);
-        var textBrush = new SolidColorBrush(Colors.Black);
-        textBrush.Freeze();
+        if (boundingRect.IsEmpty || boundingRect.Width <= 0 || boundingRect.Height <= 0)
+            return null;
+
         var plan = ImageTranslateTextOverlayLayout.Create(
             content,
             boundingRect,
-            (fontSize, textRect) => MeasureFormattedText(content.Text, fontSize, textRect.Width, textBrush, pixelsPerDip));
-
-        var backgroundBrush = new SolidColorBrush(plan.BackgroundColor);
-        backgroundBrush.Freeze();
-
-        foreach (var eraseRect in plan.EraseRects)
-            drawingContext.DrawRectangle(backgroundBrush, null, eraseRect);
+            (fontSize, textRect, isMultiLine) => MeasureFormattedText(
+                content.Text,
+                fontSize,
+                textRect.Width,
+                textBrush,
+                pixelsPerDip,
+                isMultiLine ? fontSize * 1.28 : 0,
+                isMultiLine ? 0 : 1));
 
         var formattedText = CreateFormattedText(
             content.Text,
             plan.FontSize,
             textBrush,
             plan.TextRect.Width,
-            plan.TextRect.Height,
+            plan.MaxTextHeight,
             plan.LineHeight,
-            plan.ShouldTrim,
-            pixelsPerDip);
+            plan.ShouldTrim || !plan.IsMultiLine,
+            pixelsPerDip,
+            plan.MaxLineCount);
 
         var textPosition = new Point(
             plan.TextRect.Left,
             plan.IsMultiLine
                 ? plan.TextRect.Top
-                : plan.TextRect.Top + Math.Max(0, (plan.TextRect.Height - formattedText.Height) / 2)
+                : plan.TextClipRect.Top + Math.Max(0, (plan.TextClipRect.Height - formattedText.Height) / 2)
         );
 
-        drawingContext.PushClip(new RectangleGeometry(plan.BoundingRect));
-        drawingContext.DrawText(formattedText, textPosition);
+        return new TranslatedTextOverlay(plan, formattedText, textPosition);
+    }
+
+    private static void DrawTranslatedTextOverlay(DrawingContext drawingContext, TranslatedTextOverlay overlay)
+    {
+        drawingContext.PushClip(new RectangleGeometry(overlay.Plan.TextClipRect));
+        drawingContext.DrawText(overlay.FormattedText, overlay.TextPosition);
         drawingContext.Pop();
     }
 
     /// <summary>
     /// 测量换行文本的实际占用尺寸。
     /// </summary>
-    private Size MeasureFormattedText(string text, double fontSize, double maxWidth, Brush textBrush, double pixelsPerDip)
+    private Size MeasureFormattedText(
+        string text,
+        double fontSize,
+        double maxWidth,
+        Brush textBrush,
+        double pixelsPerDip,
+        double lineHeight = 0,
+        int maxLineCount = 0)
     {
         var formattedText = CreateFormattedText(
             text,
@@ -755,9 +789,10 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
             textBrush,
             maxWidth,
             double.PositiveInfinity,
-            fontSize * 1.28,
+            lineHeight,
             false,
-            pixelsPerDip);
+            pixelsPerDip,
+            maxLineCount);
 
         return new Size(formattedText.Width, formattedText.Height);
     }
@@ -773,7 +808,8 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
         double maxHeight,
         double lineHeight,
         bool shouldTrim,
-        double pixelsPerDip)
+        double pixelsPerDip,
+        int maxLineCount = 0)
     {
         var formattedText = new FormattedText(
             text,
@@ -787,11 +823,19 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
         formattedText.MaxTextWidth = maxWidth;
         if (!double.IsPositiveInfinity(maxHeight))
             formattedText.MaxTextHeight = Math.Max(maxHeight, lineHeight);
-        formattedText.LineHeight = lineHeight;
+        if (lineHeight > 0)
+            formattedText.LineHeight = lineHeight;
+        if (maxLineCount > 0)
+            formattedText.MaxLineCount = maxLineCount;
         formattedText.TextAlignment = TextAlignment.Left;
         formattedText.Trimming = shouldTrim ? TextTrimming.CharacterEllipsis : TextTrimming.None;
         return formattedText;
     }
+
+    private sealed record TranslatedTextOverlay(
+        ImageTranslateTextOverlayPlan Plan,
+        FormattedText FormattedText,
+        Point TextPosition);
 
     #endregion
 

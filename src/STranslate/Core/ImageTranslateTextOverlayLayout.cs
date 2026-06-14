@@ -7,9 +7,12 @@ namespace STranslate.Core;
 internal sealed record ImageTranslateTextOverlayPlan(
     Rect BoundingRect,
     Rect TextRect,
+    Rect TextClipRect,
     IReadOnlyList<Rect> EraseRects,
     double FontSize,
     double LineHeight,
+    double MaxTextHeight,
+    int MaxLineCount,
     bool IsMultiLine,
     bool ShouldTrim,
     Color BackgroundColor)
@@ -27,7 +30,7 @@ internal static class ImageTranslateTextOverlayLayout
     internal static ImageTranslateTextOverlayPlan Create(
         OcrLayoutBlock block,
         Rect boundingRect,
-        Func<double, Rect, Size> measureText)
+        Func<double, Rect, bool, Size> measureText)
     {
         var lineRects = block.LineBoxPoints
             .Select(CalculateBoundingRect)
@@ -45,34 +48,90 @@ internal static class ImageTranslateTextOverlayLayout
             boundingRect,
             HorizontalTextPadding,
             textVerticalPadding);
+        var eraseRects = CreateEraseRects(lineRects, boundingRect, lineHeight);
+        var textClipRect = CreateTextClipRect(boundingRect, eraseRects);
 
         var fontSizeLimit = Math.Clamp(
             lineHeight * (isMultiLine ? MultilineFontScale : SingleLineFontScale),
             ImageTranslateTextOverlayPlan.MinFontSize,
             ImageTranslateTextOverlayPlan.MaxFontSize);
-        var (fontSize, shouldTrim) = FitFontSize(fontSizeLimit, textRect, measureText);
+        var fitRect = isMultiLine
+            ? textRect
+            : new Rect(textRect.Left, textClipRect.Top, textRect.Width, textClipRect.Height);
+        var (fontSize, shouldTrim) = FitFontSize(fontSizeLimit, fitRect, isMultiLine, measureText);
 
         return new ImageTranslateTextOverlayPlan(
             boundingRect,
             textRect,
-            CreateEraseRects(lineRects, boundingRect, lineHeight),
+            textClipRect,
+            eraseRects,
             fontSize,
-            fontSize * 1.28,
+            isMultiLine ? fontSize * 1.28 : 0,
+            isMultiLine ? textRect.Height : double.PositiveInfinity,
+            isMultiLine ? 0 : 1,
             isMultiLine,
             shouldTrim,
             Color.FromArgb(255, 255, 255, 255));
     }
 
+    internal static string NormalizeOverlayText(string text)
+    {
+        var builder = new System.Text.StringBuilder(text.Length);
+        var pendingSpace = false;
+
+        foreach (var ch in text)
+        {
+            if (char.IsWhiteSpace(ch))
+            {
+                pendingSpace = builder.Length > 0;
+                continue;
+            }
+
+            if (pendingSpace)
+            {
+                if (ShouldKeepCollapsedSpace(builder[^1], ch))
+                    builder.Append(' ');
+
+                pendingSpace = false;
+            }
+
+            builder.Append(ch);
+        }
+
+        return builder.ToString();
+    }
+
+    private static bool ShouldKeepCollapsedSpace(char previous, char current)
+    {
+        if (IsCjk(previous) || IsCjk(current))
+            return false;
+
+        if (char.IsPunctuation(current))
+            return false;
+
+        if (char.IsPunctuation(previous))
+            return previous is ',' or ';' or ':';
+
+        return true;
+    }
+
+    private static bool IsCjk(char ch) =>
+        (ch >= '\u3400' && ch <= '\u9fff') ||
+        (ch >= '\uf900' && ch <= '\ufaff') ||
+        (ch >= '\u3040' && ch <= '\u30ff') ||
+        (ch >= '\uac00' && ch <= '\ud7af');
+
     private static (double FontSize, bool ShouldTrim) FitFontSize(
         double fontSizeLimit,
         Rect textRect,
-        Func<double, Rect, Size> measureText)
+        bool isMultiLine,
+        Func<double, Rect, bool, Size> measureText)
     {
         var minFontSize = ImageTranslateTextOverlayPlan.MinFontSize;
-        if (!Fits(measureText(minFontSize, textRect), textRect))
+        if (!Fits(measureText(minFontSize, textRect, isMultiLine), textRect))
             return (minFontSize, true);
 
-        if (Fits(measureText(fontSizeLimit, textRect), textRect))
+        if (Fits(measureText(fontSizeLimit, textRect, isMultiLine), textRect))
             return (fontSizeLimit, false);
 
         var low = minFontSize;
@@ -81,7 +140,7 @@ internal static class ImageTranslateTextOverlayLayout
         while (high - low > 0.5)
         {
             var mid = (low + high) / 2;
-            if (Fits(measureText(mid, textRect), textRect))
+            if (Fits(measureText(mid, textRect, isMultiLine), textRect))
             {
                 best = mid;
                 low = mid;
@@ -109,6 +168,15 @@ internal static class ImageTranslateTextOverlayLayout
         return lineRects
             .Select(rect => ExpandRect(rect, horizontalPadding, verticalPadding))
             .ToList();
+    }
+
+    private static Rect CreateTextClipRect(Rect boundingRect, IReadOnlyList<Rect> eraseRects)
+    {
+        var textClipRect = boundingRect;
+        foreach (var eraseRect in eraseRects)
+            textClipRect.Union(eraseRect);
+
+        return textClipRect;
     }
 
     private static Rect ExpandRect(Rect rect, double horizontalPadding, double verticalPadding) =>

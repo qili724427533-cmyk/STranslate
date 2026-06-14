@@ -147,6 +147,53 @@ public class OcrLayoutAnalyzerTests
     }
 
     [Fact]
+    public void SmartSplitsPdfBodyParagraphsOnBlankLineGaps()
+    {
+        var result = AnalyzeSmart(
+            Box("Namespaces with synchronization capability provide", 0, 0, 500, 30),
+            Box("two additional attributes, SynchOn and SynchFail.", 0, 36, 500, 30),
+            Box("Synchronization for a new or changed recipe,", 0, 94, 500, 30),
+            Box("recipe form, consists of uploading the execution recipe.", 0, 130, 500, 30),
+            Box("The recipe executor saves the last value", 0, 188, 500, 30),
+            Box("parameter in the execution recipe attribute.", 0, 224, 500, 30));
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(
+            "Namespaces with synchronization capability provide two additional attributes, SynchOn and SynchFail.",
+            result[0].Text);
+        Assert.Equal(
+            "Synchronization for a new or changed recipe,recipe form, consists of uploading the execution recipe.",
+            result[1].Text);
+        Assert.Equal(
+            "The recipe executor saves the last value parameter in the execution recipe attribute.",
+            result[2].Text);
+    }
+
+    [Fact]
+    public void SmartSplitsAfterSentenceEndingWithLargerGap()
+    {
+        var result = AnalyzeSmart(
+            Box("The first paragraph ends here.", 0, 0, 420, 30),
+            Box("Another paragraph starts with an uppercase word.", 0, 56, 500, 30));
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("The first paragraph ends here.", result[0].Text);
+        Assert.Equal("Another paragraph starts with an uppercase word.", result[1].Text);
+    }
+
+    [Fact]
+    public void SmartSplitsAfterShortLineReturningToBodyLeft()
+    {
+        var result = AnalyzeSmart(
+            Box("which synchronization failed.", 0, 0, 260, 30),
+            Box("Synchronization for a new recipe starts here", 0, 56, 500, 30));
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("which synchronization failed.", result[0].Text);
+        Assert.Equal("Synchronization for a new recipe starts here", result[1].Text);
+    }
+
+    [Fact]
     public void ApplyLeavesContentsWithoutBoxPointsUnchanged()
     {
         var ocrResult = new OcrResult
