@@ -54,18 +54,18 @@
 - OCR 模型：
   - `OcrRequest.PixelWidth` / `PixelHeight` 由宿主在截图 OCR、OCR 窗口和图片翻译中传入真实图片尺寸，旧插件可忽略。
   - `OcrResult.OcrContents` 是兼容旧插件的扁平文本块列表。
-  - `OcrResult.Regions` 可返回结构化布局，层级为 `OcrRegion -> OcrParagraph -> OcrContent`。
+  - `OcrResult.Regions` 可返回结构化分段，层级为 `OcrRegion -> OcrParagraph -> OcrContent`。
   - `OcrContent.BoxPoints`、`OcrRegion.BoxPoints`、`OcrParagraph.BoxPoints` 均使用图片像素坐标；宿主不再接收归一化坐标单位声明。
 - OCR 坐标能力：
   - `IOcrPlugin.SupportBoxPoints()` 默认返回 `false`，普通 OCR 不要求插件支持文本坐标框。
   - 图片翻译 OCR 服务必须 override `SupportBoxPoints()` 并返回 `true`，否则不会出现在图片翻译 OCR 选择列表。
-  - 服务商能返回段落/区域结构时直接填充 `OcrResult.Regions`；`Auto` / `Provider` 模式会按是否存在有效 `Regions` 判断结构化布局。
-  - 图片翻译专用链路、`Auto` / `Provider` / `Smart` 分段策略和结构化布局影响见 [flow-image-translation.md](flow-image-translation.md)。
+  - 服务商能返回段落/区域结构时直接填充 `OcrResult.Regions`；`Auto` / `Provider` 模式会按是否存在有效 `Regions` 判断结构化分段。
+  - 图片翻译专用链路、`Auto` / `Provider` / `Smart` 分段策略和结构化分段影响见 [flow-image-translation.md](flow-image-translation.md)。
 - `LangEnum`：语言枚举，当前包含 `Uzbek`；新增语言时需要同步主程序语言检测、内置插件语言映射和本地化文本。
 
 ### 图片翻译 OCR 插件要求
 - 普通 OCR 插件仍只需要实现 `IOcrPlugin`；想进入图片翻译 OCR 下拉列表时，必须实现 `SupportBoxPoints() => true`。
-- 如果返回结构化布局：
+- 如果返回结构化分段：
   - `OcrResult.Regions` 应按服务商真实区域、段落、行填充。
   - `OcrParagraph.Lines` 内的每个 `OcrContent` 应带文本和坐标。
   - `OcrParagraph.BoxPoints` 可直接返回服务商段落框；不返回时宿主会用行框求外接框。

@@ -310,8 +310,8 @@
     <sys:String x:Key="Standalone_ImTranShowAnnotatedDescription">翻訳結果/検出結果画像の表示切替</sys:String>
     <sys:String x:Key="Standalone_ImTranShowTextControlHeader">テキストボックスを表示</sys:String>
     <sys:String x:Key="Standalone_ImTranShowTextControlDescription">右側のテキストボックスの表示/非表示</sys:String>
-    <sys:String x:Key="Standalone_LayoutAnalysisHeader">レイアウト分析設定</sys:String>
-    <sys:String x:Key="Standalone_LayoutAnalysisDescription">認識結果の結合設定</sys:String>
+    <sys:String x:Key="Standalone_LayoutAnalysisHeader">テキスト分割設定</sys:String>
+    <sys:String x:Key="Standalone_LayoutAnalysisDescription">認識結果の分割と結合方法を設定します。</sys:String>
 
     <sys:String x:Key="Total">計</sys:String>
     <sys:String x:Key="Item">件</sys:String>

@@ -310,8 +310,8 @@
     <sys:String x:Key="Standalone_ImTranShowAnnotatedDescription">번역 결과/텍스트 감지 이미지 표시 전환</sys:String>
     <sys:String x:Key="Standalone_ImTranShowTextControlHeader">텍스트 상자 표시</sys:String>
     <sys:String x:Key="Standalone_ImTranShowTextControlDescription">오른쪽 텍스트 상자 표시/숨기기</sys:String>
-    <sys:String x:Key="Standalone_LayoutAnalysisHeader">레이아웃 분석 설정</sys:String>
-    <sys:String x:Key="Standalone_LayoutAnalysisDescription">인식 결과에 대한 병합 구성</sys:String>
+    <sys:String x:Key="Standalone_LayoutAnalysisHeader">텍스트 분할 설정</sys:String>
+    <sys:String x:Key="Standalone_LayoutAnalysisDescription">인식 결과의 분할 및 병합 방식을 설정합니다.</sys:String>
 
     <sys:String x:Key="Total">총</sys:String>
     <sys:String x:Key="Item">항목</sys:String>

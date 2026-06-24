@@ -318,8 +318,8 @@
     <sys:String x:Key="Standalone_ImTranShowAnnotatedDescription">切換翻譯結果／文字偵測圖顯示。</sys:String>
     <sys:String x:Key="Standalone_ImTranShowTextControlHeader">顯示文字框</sys:String>
     <sys:String x:Key="Standalone_ImTranShowTextControlDescription">顯示／隱藏右側文字框。</sys:String>
-    <sys:String x:Key="Standalone_LayoutAnalysisHeader">版面分析設定</sys:String>
-    <sys:String x:Key="Standalone_LayoutAnalysisDescription">設定辨識結果的合併方式。</sys:String>
+    <sys:String x:Key="Standalone_LayoutAnalysisHeader">分段邏輯設定</sys:String>
+    <sys:String x:Key="Standalone_LayoutAnalysisDescription">設定辨識結果的分段與合併方式。</sys:String>
 
     <!--  History Page  -->
     <sys:String x:Key="Total">共</sys:String>

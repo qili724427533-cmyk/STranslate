@@ -318,8 +318,8 @@
     <sys:String x:Key="Standalone_ImTranShowAnnotatedDescription">切换翻译结果/文本检测图显示</sys:String>
     <sys:String x:Key="Standalone_ImTranShowTextControlHeader">显示文本框</sys:String>
     <sys:String x:Key="Standalone_ImTranShowTextControlDescription">显示/隐藏右侧文本框</sys:String>
-    <sys:String x:Key="Standalone_LayoutAnalysisHeader">版面分析设置</sys:String>
-    <sys:String x:Key="Standalone_LayoutAnalysisDescription">对识别结果进行合并配置</sys:String>
+    <sys:String x:Key="Standalone_LayoutAnalysisHeader">分段逻辑设置</sys:String>
+    <sys:String x:Key="Standalone_LayoutAnalysisDescription">配置识别结果的分段与合并方式</sys:String>
 
     <!--  History Page  -->
     <sys:String x:Key="Total">共</sys:String>

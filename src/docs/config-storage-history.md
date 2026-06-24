@@ -64,7 +64,7 @@
 
 ## 关键数据结构/配置
 - `Settings`
-  - UI/主题/语言/窗口位置/自动翻译/网络/插件市场/OCR版面分析/外部调用/自动检查更新等全局配置。
+  - UI/主题/语言/窗口位置/自动翻译/网络/插件市场/OCR分段逻辑/外部调用/自动检查更新等全局配置。
   - 取词相关：`TextSeparatorHandleType`、`TextSeparatorHandleScopes`、`SelectedTextFetchTimeoutMs`、`CrosswordFetchFailedFallbackTarget`。
   - 窗口相关：`MainWindowMaxHeightRatio`、`ShowImageTranslateItemInNotifyIconMenu`。
 - `ServiceSettings`

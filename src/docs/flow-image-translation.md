@@ -3,20 +3,20 @@
 ## 模块职责
 - 管理图片翻译窗口的导入、截图、重试、标注图和结果图显示。
 - 维护图片翻译专用 OCR 服务与翻译服务绑定，避免普通 OCR 服务误入需要坐标的流程。
-- 对 OCR 结果执行结构化投影、版面分析、翻译分发、文字覆盖回写和图片级文本选中。
-- 约束 OCR 插件坐标框支持声明、结构化布局返回方式和本地 `Smart` 分段回退策略。
+- 对 OCR 结果执行结构化投影、分段逻辑、翻译分发、文字覆盖回写和图片级文本选中。
+- 约束 OCR 插件坐标框支持声明、结构化分段返回方式和本地 `Smart` 分段回退策略。
 
 ## 关键入口
 - `STranslate/ViewModels/ImageTranslateWindowViewModel.cs`
   - `ExecuteAsync(Bitmap)`：图片翻译窗口主执行命令。
-  - `ApplyLayoutAnalysis(OcrResult)`：按 `LayoutAnalysisMode` 生成 `OcrLayoutBlock`。
+  - `ApplyLayoutAnalysis(OcrResult)`：按分段模式生成 `OcrLayoutBlock`。
   - `GenerateTranslatedImage(IReadOnlyList<OcrLayoutBlock>, BitmapSource?)`：擦除原文并覆盖译文。
   - `RefreshSelectableOcrWords()`：在原文标注图和译文结果图之间切换图片文本选中数据源。
 - `STranslate/Core/OcrLayoutAnalyzer.cs`
-  - `AnalyzeBlocks(OcrResult, LayoutAnalysisMode)`：版面分析入口。
+  - `AnalyzeBlocks(OcrResult, LayoutAnalysisMode)`：分段逻辑入口。
   - `Auto` / `Provider` / `Smart` / `NoMerge`：图片翻译分段策略。
 - `STranslate/Core/OcrLayoutBlock.cs`
-  - 图片翻译内部布局块，记录段落框、行框、布局来源和置信度。
+  - 图片翻译内部分段块，记录段落框、行框、分段来源和置信度。
 - `STranslate/Core/ImageTranslateTextOverlayLayout.cs`
   - 计算覆盖层矩形、擦除矩形、字体大小、多行回退、裁剪策略和主题色。
 - `STranslate/Services/OcrService.cs`
@@ -36,15 +36,15 @@
 7. `ApplyLayoutAnalysis()` 生成 `OcrLayoutBlock`，并把分析后的块投影回 `OcrResult.OcrContents`，供标注图、复制和结果文本复用。
 8. 获取 `TranslateService.ImageTranslateService`，该服务必须是 `ITranslatePlugin`，词典类服务不会进入图片翻译翻译列表。
 9. 对每个 `OcrLayoutBlock.Text` 并发执行语言检测和翻译；翻译成功后用 `ImageTranslateTextOverlayLayout.NormalizeOverlayText()` 收敛空白，再回写到对应 block。
-10. 使用翻译后的 layout blocks 生成结果图：优先按每个 block 的 `LineBoxPoints` 擦除原文，再按覆盖布局绘制译文。
+10. 使用翻译后的分段块生成结果图：优先按每个 block 的 `LineBoxPoints` 擦除原文，再按覆盖策略绘制译文。
 11. `Settings.IsImTranShowingAnnotated` 控制显示标注图还是结果图；图片文本选中同步切换为原文块或译文块。
 
-## 版面分析模式
-- `Auto`：默认模式。OCR 返回结构化 `Regions` 时使用 Provider 段落；没有结构化布局时回退 `Smart`。
-- `Provider`：只使用服务商结构化 `Regions -> Paragraphs -> Lines`；缺失结构化布局时退化为 `NoMerge`，不自行猜段落。
+## 分段模式
+- `Auto`：默认模式。OCR 返回结构化 `Regions` 时使用 Provider 段落；没有结构化分段时回退 `Smart`。
+- `Provider`：只使用服务商结构化 `Regions -> Paragraphs -> Lines`；缺失结构化分段时退化为 `NoMerge`，不自行猜段落。
 - `Smart`：本地智能分段。适用于只返回扁平 `OcrContents` 但有坐标框的 OCR。
 - `NoMerge`：保留 OCR 原始块，适合用户希望逐块翻译或服务商块已经足够稳定的场景。
-- 无有效坐标：跳过智能版面分析，保留 OCR 返回文本；图片翻译无法可靠生成覆盖框和图片文本选中框。
+- 无有效坐标：跳过智能分段，保留 OCR 返回文本；图片翻译无法可靠生成覆盖框和图片文本选中框。
 
 ## Smart 分段策略
 `Smart` 只在宿主内部生效，不改变插件接口和外部枚举。
@@ -69,7 +69,7 @@
 - 如服务商返回归一化坐标，插件需要使用 `OcrRequest.PixelWidth` / `PixelHeight` 换算成图片像素坐标后再写入 `BoxPoints`。
 - 插件不要按屏幕缩放或窗口缩放改写坐标；图片翻译使用图片自身的像素坐标。
 
-`Auto` 模式下，结构化 OCR 的 Provider 段落优先级高于本地 `Smart`，所以插件返回的 `Regions` 会直接影响翻译粒度。插件侧应尽量让 `Paragraphs` 表示真实语义段落或表格单元项，而不是把整列/整表合成一个 paragraph。
+`Auto` 模式下，结构化 OCR 的 Provider 段落优先级高于本地 `Smart`，所以插件返回的 `Regions` 会直接影响分段粒度。插件侧应尽量让 `Paragraphs` 表示真实语义段落或表格单元项，而不是把整列/整表合成一个 paragraph。
 
 ## 译文覆盖策略
 - 覆盖层不直接使用截图背景采样颜色，而是跟随软件主题：
@@ -90,7 +90,7 @@
 - OCR 专用绑定：`ServiceSettings.ImageTranslateOcrSvcID`，由图片翻译窗口的 OCR 选择写入。
 - 翻译专用绑定：`ServiceSettings.ImageTranslateSvcID`，由图片翻译窗口的翻译服务选择写入。
 - 服务缺失或插件被删除时，启动加载会重置失效的图片翻译服务 ID。
-- `Settings.LayoutAnalysisMode` 默认 `Auto`，序列化支持 `auto`、`provider`、`smart`、`noMerge`；旧未知值归一为 `Auto`。
+- `Settings.LayoutAnalysisMode` 是分段模式配置，默认 `Auto`，序列化支持 `auto`、`provider`、`smart`、`noMerge`；旧未知值归一为 `Auto`。
 - `Settings.IsImTranShowingAnnotated` 控制标注图/结果图显示。
 - `Settings.IsImTranShowingTextControl` 控制图片翻译窗口文本区域显示。
 - `Settings.ImageTranslateSourceLang` / `ImageTranslateTargetLang` 控制图片翻译语言。
@@ -116,7 +116,7 @@
 - `Tests/STranslate.Tests/ImageTranslateTextOverlayLayoutTests.cs`
 
 ## 常见改动任务
-- 调整 OCR 分段或表格/网格误合并：优先改 `OcrLayoutAnalyzer`，并补 `OcrLayoutAnalyzerTests`。
+- 调整图片翻译分段逻辑或表格/网格误合并：优先改 `OcrLayoutAnalyzer`，并补 `OcrLayoutAnalyzerTests`。
 - 调整译文覆盖大小、裁剪、擦除范围或主题颜色：改 `ImageTranslateTextOverlayLayout`，并补 `ImageTranslateTextOverlayLayoutTests`。
 - 接入服务商结构化 OCR：插件填充 `OcrResult.Regions`，并确保每个 `OcrContent` 有图片像素坐标 `BoxPoints`。
 - 调整图片翻译 OCR 候选服务：改 `OcrService.IsImageTranslateOcrService()` / `GetImageTranslateOcrServices()`。

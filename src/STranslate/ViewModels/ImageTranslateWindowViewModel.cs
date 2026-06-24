@@ -202,10 +202,10 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
             // 生成原始OCR标注图像（显示识别边框）
             //var originalAnnotatedImage = GenerateAnnotatedImage(_lastOcrResult, _sourceImage);
 
-            // 版面分析
+            // 分段逻辑
             var layoutBlocks = ApplyLayoutAnalysis(_lastOcrResult);
 
-            // 生成版面分析后的标注图像（显示合并后的边框）
+            // 生成分段后的标注图像（显示合并后的边框）
             _annotatedImage = GenerateAnnotatedImage(_lastOcrResult, _sourceImage);
 
             if (_translateService.ImageTranslateService?.Plugin is not ITranslatePlugin tranSvc)
@@ -1015,10 +1015,10 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
 
     #endregion
 
-    #region Layout Analysis
+    #region Text Segmentation
 
     /// <summary>
-    /// 应用版面分析，直接修改 OCR 结果中的内容分组。
+    /// 应用分段逻辑，直接修改 OCR 结果中的内容分组。
     /// </summary>
     /// <param name="ocrResult">OCR 识别结果</param>
     private List<OcrLayoutBlock> ApplyLayoutAnalysis(OcrResult ocrResult)

@@ -53,7 +53,7 @@
 - `OcrContent.BoxPoints`：文本坐标框顶点，使用图片像素坐标，普通 OCR 可为空。
 - `OcrResult.Text`：优先从 `OcrContents` 聚合；没有扁平内容时从 `Regions` 聚合段落文本。
 
-结构化 OCR 和图片翻译版面分析的细节见 [flow-image-translation.md](flow-image-translation.md)。
+结构化 OCR 和图片翻译分段逻辑的细节见 [flow-image-translation.md](flow-image-translation.md)。
 
 ## 配置
 - `Settings.OcrLanguage`：OCR 语言。
@@ -62,7 +62,7 @@
 - `Settings.FocusInputAfterScreenshotTranslate`：截图翻译完成后的主窗口焦点策略。
 - `Settings.TextSeparatorHandleType` / `TextSeparatorHandleScopes`：截图翻译和静默 OCR 的取词文本后处理。
 
-图片翻译专用 OCR 服务、翻译服务、版面分析模式和覆盖图设置见 [flow-image-translation.md](flow-image-translation.md)。
+图片翻译专用 OCR 服务、翻译服务、分段模式和覆盖图设置见 [flow-image-translation.md](flow-image-translation.md)。
 
 ## 错误处理与通知策略
 ### 服务未配置

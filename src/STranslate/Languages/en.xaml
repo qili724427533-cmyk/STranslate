@@ -318,8 +318,8 @@
     <sys:String x:Key="Standalone_ImTranShowAnnotatedDescription">Toggle between the translation result and the text detection overlay.</sys:String>
     <sys:String x:Key="Standalone_ImTranShowTextControlHeader">Show Text Panel</sys:String>
     <sys:String x:Key="Standalone_ImTranShowTextControlDescription">Show or hide the text panel on the right side.</sys:String>
-    <sys:String x:Key="Standalone_LayoutAnalysisHeader">Layout Analysis Settings</sys:String>
-    <sys:String x:Key="Standalone_LayoutAnalysisDescription">Configure how recognized text blocks are merged.</sys:String>
+    <sys:String x:Key="Standalone_LayoutAnalysisHeader">Text Segmentation Settings</sys:String>
+    <sys:String x:Key="Standalone_LayoutAnalysisDescription">Configure how recognized text blocks are segmented and merged.</sys:String>
 
     <!--  History Page  -->
     <sys:String x:Key="Total">Total</sys:String>
@@ -601,9 +601,9 @@
     <sys:String x:Key="ProxyTypeNone">None</sys:String>
 
     <sys:String x:Key="LayoutAnalysisModeAuto">Auto</sys:String>
-    <sys:String x:Key="LayoutAnalysisModeProvider">Provider</sys:String>
-    <sys:String x:Key="LayoutAnalysisModeSmart">Smart</sys:String>
-    <sys:String x:Key="LayoutAnalysisModeNoMerge">NoMerge</sys:String>
+    <sys:String x:Key="LayoutAnalysisModeProvider">Provider Segmentation</sys:String>
+    <sys:String x:Key="LayoutAnalysisModeSmart">Smart Segmentation</sys:String>
+    <sys:String x:Key="LayoutAnalysisModeNoMerge">No merge</sys:String>
 
     <sys:String x:Key="WindowScreenTypeRememberLastLaunchLocation">RememberLastLaunchLocation</sys:String>
     <sys:String x:Key="WindowScreenTypeCursor">Cursor</sys:String>
