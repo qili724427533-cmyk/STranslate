@@ -50,7 +50,11 @@
 
 ## 窗口模式
 - `Standalone` 是默认模式，保留当前可缩放、可调整大小的独立窗口。
-- `Compact` 使用无标题、不可缩放、非任务栏窗口，图片区尺寸等于截图选区，窗口高度额外预留底部按钮区。
+- `Compact` 使用无标题、不可缩放、非任务栏、**完全透明**窗口，窗口本身无背景色；屏幕上只看到截图内容 + 悬浮按钮条（按钮条自带半透明胶囊背景）。
+- 精简窗口的图片始终钉在截图选区的物理屏幕位置（贴图位置不变铁律）；按钮条作为悬浮额外内容，根据空间自动选择位置：
+  - 横向：按钮条窄于选区时居中；宽于选区时贴左缘向右延展，右边放不下则镜像向左延展。
+  - 纵向：默认在图片下方；下方放不下翻上方；上下都放不下则叠加在图片底部之上（按钮条 ZIndex 高于图片）。
+- 布局算法在 `ImageTranslateCompactWindowPlacement.CreateLayout`，返回窗口矩形、图片偏移、按钮条位置与 `ToolbarSide`（`Below`/`Above`/`Overlay`），由 `ImageTranslateCompactWindow.ApplyLayoutToVisualTree` 换算成 DIP 应用到 `ImageZoom` 与按钮条 `Border`。
 - 精简窗口不支持图片拖拽、滚轮缩放或双击复位，底部只保留关闭、复制/全选、标注切换、重新截图、重新执行和设置等核心按钮。
 - 精简窗口按 `Esc`、点击窗口外部或再次触发图片翻译关闭；右键菜单和窗口内部文字选择不会触发外部关闭。
 - 精简窗口不显示右侧文本框，`Settings.IsImTranShowingTextControl` 只影响独立窗口。
@@ -142,3 +146,4 @@
 - 调整图片翻译翻译服务候选：改 `ImageTranslateWindowViewModel.OnTransFilter()` 或 `TranslateService.ImageTranslateService` 相关逻辑。
 - 调整图片上选中文本行为：改 `RefreshSelectableOcrWords()`、`OcrWordBuilder` 或 `ImageZoom` 的选区逻辑。
 - 调整精简窗口定位或关闭行为：改 `ImageTranslateCompactWindow` 的 `PlaceForCapture` / `PlaceOnPhysicalWindowBounds`，选区物理坐标由 `Screenshot.GetScreenshotCaptureAsync` 经 ScreenGrab `CaptureWithRegionAsync` 直接回传。
+- 调整精简窗口布局/定位/按钮条翻向逻辑：改 `ImageTranslateCompactWindowPlacement.CreateLayout`，并补 `ImageTranslateCompactWindowPlacementTests` 对应场景；按钮条尺寸/间距常量在 `ImageTranslateCompactWindow`（`ToolbarWidth`/`GapH`/`GapV`/`WindowMargin`）。
