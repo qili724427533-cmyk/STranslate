@@ -13,6 +13,11 @@ namespace STranslate.Helpers;
 /// </summary>
 internal static class ImageTranslateRenderer
 {
+    // 超采样（Super-sampling）参数：小图放大渲染以保证译文矢量绘制的清晰度。
+    private const double SupersampleMinDimension = 1000;
+    private const double SupersampleMaxScale = 4.0;
+    private const double SupersampleMinScale = 2.0;
+
     /// <summary>
     /// 生成带有翻译文本覆盖的图像。
     /// </summary>
@@ -46,12 +51,12 @@ internal static class ImageTranslateRenderer
         double scaleFactor = 1.0;
         double minDimension = Math.Min(image.PixelWidth, image.PixelHeight);
 
-        // 如果最小边小于 1000 像素，进行放大，最大放大倍数为 4 倍
-        if (minDimension < 1000)
+        // 最小边小于阈值时按比例放大，但限制在 [MinScale, MaxScale] 区间
+        if (minDimension < SupersampleMinDimension)
         {
-            scaleFactor = Math.Min(4.0, 1000.0 / minDimension);
-            // 确保至少放大 2 倍以获得较好的抗锯齿效果
-            scaleFactor = Math.Max(scaleFactor, 2.0);
+            scaleFactor = Math.Min(SupersampleMaxScale, SupersampleMinDimension / minDimension);
+            // 确保至少放大 MinScale 倍以获得较好的抗锯齿效果
+            scaleFactor = Math.Max(scaleFactor, SupersampleMinScale);
         }
 
         // 计算渲染目标尺寸
@@ -203,7 +208,7 @@ internal static class ImageTranslateRenderer
                 textRect.Width,
                 measureTextBrush,
                 pixelsPerDip,
-                isMultiLine ? fontSize * 1.28 : 0,
+                isMultiLine ? fontSize * ImageTranslateTextOverlayPlan.MultilineLineHeightScale : 0,
                 isMultiLine ? 0 : 1),
             overlayTheme);
 

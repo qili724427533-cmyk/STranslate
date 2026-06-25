@@ -22,6 +22,9 @@ internal sealed record ImageTranslateTextOverlayPlan(
 {
     internal const double MinFontSize = 6;
     internal const double MaxFontSize = 128;
+
+    /// <summary>多行渲染时行高相对字号的倍数（行高 = 字号 × 此倍数）。</summary>
+    internal const double MultilineLineHeightScale = 1.28;
 }
 
 internal enum ImageTranslateOverlayTheme
@@ -100,7 +103,7 @@ internal static class ImageTranslateTextOverlayLayout
             overlayRect,
             eraseRects,
             fontSize,
-            renderAsMultiLine ? fontSize * 1.28 : 0,
+            renderAsMultiLine ? fontSize * ImageTranslateTextOverlayPlan.MultilineLineHeightScale : 0,
             renderAsMultiLine ? textRect.Height : double.PositiveInfinity,
             renderAsMultiLine ? 0 : 1,
             renderAsMultiLine,

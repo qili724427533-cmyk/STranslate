@@ -557,41 +557,30 @@ internal static class OcrLayoutAnalyzer
         return text;
     }
 
-    private static string JoinParagraphText(IReadOnlyList<LineSegment> lines)
+    private static string JoinParagraphText(IReadOnlyList<LineSegment> lines) =>
+        JoinTextWithSpacing(lines.Select(line => line.Text).ToList());
+
+    private static string JoinProviderParagraphText(IReadOnlyList<OcrContent> lines) =>
+        JoinTextWithSpacing(lines.Select(line => line.Text).ToList());
+
+    /// <summary>
+    /// 按阅读顺序拼接文本片段：处理连字符断词合并，并在需要时插入空格。
+    /// </summary>
+    private static string JoinTextWithSpacing(IReadOnlyList<string> texts)
     {
-        var text = lines[0].Text;
-        for (var i = 1; i < lines.Count; i++)
+        var text = texts[0];
+        for (var i = 1; i < texts.Count; i++)
         {
-            if (ShouldMergeHyphenated(text, lines[i].Text))
+            if (ShouldMergeHyphenated(text, texts[i]))
             {
-                text = text[..^1] + lines[i].Text;
+                text = text[..^1] + texts[i];
                 continue;
             }
 
-            if (NeedsSpace(text, lines[i].Text))
+            if (NeedsSpace(text, texts[i]))
                 text += " ";
 
-            text += lines[i].Text;
-        }
-
-        return text;
-    }
-
-    private static string JoinProviderParagraphText(IReadOnlyList<OcrContent> lines)
-    {
-        var text = lines[0].Text;
-        for (var i = 1; i < lines.Count; i++)
-        {
-            if (ShouldMergeHyphenated(text, lines[i].Text))
-            {
-                text = text[..^1] + lines[i].Text;
-                continue;
-            }
-
-            if (NeedsSpace(text, lines[i].Text))
-                text += " ";
-
-            text += lines[i].Text;
+            text += texts[i];
         }
 
         return text;

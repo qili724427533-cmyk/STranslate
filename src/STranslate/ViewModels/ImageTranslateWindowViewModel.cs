@@ -92,6 +92,7 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
     private readonly Internationalization _i18n;
     private readonly ISnackbar _snackbar;
     private readonly INotification _notification;
+    // 显示/隐藏右侧文本面板时窗口宽度的换算：显示时翻倍再减去边距，隐藏时反向还原。
     private const double WidthMultiplier = 2;
     private const double WidthAdjustment = 12;
 
@@ -241,6 +242,12 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
                     var normalizedText = ImageTranslateTextOverlayLayout.NormalizeOverlayText(result.Text);
                     if (!string.IsNullOrWhiteSpace(normalizedText))
                         block.Text = normalizedText;
+                }
+                else
+                {
+                    // 翻译失败（接口报错或返回空）：保留 OCR 原文，仅记录日志避免并发 snackbar 刷屏。
+                    var reason = result.IsSuccess ? "empty translation" : result.Text;
+                    _logger.LogWarning("Image translate failed for a block ({Reason}); keeping original OCR text", reason);
                 }
             });
 
