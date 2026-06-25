@@ -15,8 +15,8 @@
 - `STranslate/Views/ImageTranslateWindow.xaml` / `ImageTranslateCompactWindow.xaml`
   - `Standalone`：原独立窗口，保留服务、语言、文本框和完整工具栏。
   - `Compact`：无标题精简窗口，图片区贴回截图选区，底部预留悬浮核心按钮区。
-- `STranslate/Core/ScreenshotSelectionResolver.cs`
-  - 通过截图结束鼠标位置、截图尺寸和候选屏幕区域像素匹配，推断截图选区物理坐标。
+- `STranslate/Core/Screenshot.cs`
+  - `GetScreenshotCaptureAsync()`：调用 `ScreenGrabber.CaptureWithRegionAsync`，截图时直接回传选区物理坐标，无需事后反推。
 - `STranslate/Core/OcrLayoutAnalyzer.cs`
   - `AnalyzeBlocks(OcrResult, LayoutAnalysisMode)`：分段逻辑入口。
   - `Auto` / `Provider` / `Smart` / `NoMerge`：图片翻译分段策略。
@@ -34,7 +34,7 @@
 ## 从入口到结果
 1. 入口来自主窗口图片翻译命令、图片翻译窗口导入文件、剪贴板图片、重新执行或窗口内截图。
 2. 主窗口图片翻译入口会先关闭已打开的图片翻译独立窗口或精简窗口，再截图，避免把旧结果截入新图片。
-3. `IScreenshot.GetScreenshotCaptureAsync()` 返回截图 `Bitmap` 和可空选区坐标；精简窗口优先贴回选区，定位失败时按截图结束鼠标位置和截图尺寸推断位置。
+3. `IScreenshot.GetScreenshotCaptureAsync()` 调用 `ScreenGrabber.CaptureWithRegionAsync`，截图时即回传选区物理坐标；精简窗口优先按该坐标贴回选区，仅异常情况下回退到光标附近定位。
 4. `Settings.ImageTranslateWindowMode` 决定使用 `ImageTranslateWindow` 还是 `ImageTranslateCompactWindow` 承载同一个 `ImageTranslateWindowViewModel`。
 5. `ImageTranslateWindowViewModel.ExecuteAsync(bitmap)` 清空旧状态，缓存 `_sourceImage` 并显示原图。
 6. 获取图片翻译专用 OCR：`OcrService.GetImageTranslateOcrSvcOrDefault()`。候选服务必须实现 `IOcrPlugin`，并让 `SupportBoxPoints()` 返回 `true`。
@@ -122,7 +122,7 @@
 ## 关键文件
 - `STranslate/ViewModels/ImageTranslateWindowViewModel.cs`
 - `STranslate/Views/ImageTranslateCompactWindow.xaml`
-- `STranslate/Core/ScreenshotSelectionResolver.cs`
+- `STranslate/Core/Screenshot.cs`
 - `STranslate/Core/OcrLayoutAnalyzer.cs`
 - `STranslate/Core/OcrLayoutBlock.cs`
 - `STranslate/Core/ImageTranslateTextOverlayLayout.cs`
@@ -132,7 +132,6 @@
 - `STranslate.Plugin/IOcrPlugin.cs`
 - `Tests/STranslate.Tests/OcrLayoutAnalyzerTests.cs`
 - `Tests/STranslate.Tests/ImageTranslateTextOverlayLayoutTests.cs`
-- `Tests/STranslate.Tests/ScreenshotSelectionResolverTests.cs`
 
 ## 常见改动任务
 - 调整图片翻译分段逻辑或表格/网格误合并：优先改 `OcrLayoutAnalyzer`，并补 `OcrLayoutAnalyzerTests`。
@@ -141,4 +140,4 @@
 - 调整图片翻译 OCR 候选服务：改 `OcrService.IsImageTranslateOcrService()` / `GetImageTranslateOcrServices()`。
 - 调整图片翻译翻译服务候选：改 `ImageTranslateWindowViewModel.OnTransFilter()` 或 `TranslateService.ImageTranslateService` 相关逻辑。
 - 调整图片上选中文本行为：改 `RefreshSelectableOcrWords()`、`OcrWordBuilder` 或 `ImageZoom` 的选区逻辑。
-- 调整精简窗口定位或关闭行为：改 `ImageTranslateCompactWindow` 和 `ScreenshotSelectionResolver`，并补 `ScreenshotSelectionResolverTests`。
+- 调整精简窗口定位或关闭行为：改 `ImageTranslateCompactWindow` 的 `PlaceForCapture` / `PlaceOnPhysicalWindowBounds`，选区物理坐标由 `Screenshot.GetScreenshotCaptureAsync` 经 ScreenGrab `CaptureWithRegionAsync` 直接回传。

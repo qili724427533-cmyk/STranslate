@@ -90,6 +90,11 @@ public partial class ImageTranslateCompactWindow
         PlaceOnPhysicalWindowBounds(windowBounds, dpiScale);
     }
 
+    /// <summary>
+    /// 兜底定位：当无法拿到截图选区物理坐标时（理论上 CaptureWithRegionAsync 总会返回坐标，
+    /// 仅在异常情况下为空），将窗口贴在光标左上方并约束在光标所在屏幕内。
+    /// 不再依赖 ScreenshotSelectionResolver 反推选区位置。
+    /// </summary>
     private void PlaceNearCursorScreen(DrawingSize bitmapSize)
     {
         if (!PInvoke.GetCursorPos(out var cursorPoint))
@@ -99,28 +104,28 @@ public partial class ImageTranslateCompactWindow
         }
 
         var cursorPosition = new DrawingPoint(cursorPoint.X, cursorPoint.Y);
-        var screenBounds = MonitorInfo.GetDisplayMonitors()
+
+        // 找到光标所在屏幕，用于把窗口约束在屏幕内
+        var screen = MonitorInfo.GetDisplayMonitors()
             .Select(monitor => new DrawingRectangle(
                 (int)Math.Round(monitor.Bounds.X),
                 (int)Math.Round(monitor.Bounds.Y),
                 (int)Math.Round(monitor.Bounds.Width),
                 (int)Math.Round(monitor.Bounds.Height)))
-            .ToArray();
+            .FirstOrDefault(s => s.Contains(cursorPosition));
 
-        var candidateBounds = ScreenshotSelectionResolver.CreateCandidateBounds(bitmapSize, cursorPosition)
-            .FirstOrDefault(candidate => screenBounds.Length == 0 || screenBounds.Any(screen => screen.Contains(candidate)));
+        // 默认贴在光标左上方
+        var left = cursorPosition.X - bitmapSize.Width;
+        var top = cursorPosition.Y - bitmapSize.Height;
 
-        if (candidateBounds is { Width: > 0, Height: > 0 })
+        // 约束在屏幕工作区内
+        if (screen is { Width: > 0, Height: > 0 } s)
         {
-            PlaceOnPhysicalBounds(candidateBounds);
-            return;
+            left = Math.Max(s.Left, Math.Min(left, s.Right - bitmapSize.Width));
+            top = Math.Max(s.Top, Math.Min(top, s.Bottom - bitmapSize.Height));
         }
 
-        PlaceOnPhysicalBounds(new DrawingRectangle(
-            cursorPosition.X - bitmapSize.Width,
-            cursorPosition.Y - bitmapSize.Height,
-            bitmapSize.Width,
-            bitmapSize.Height));
+        PlaceOnPhysicalBounds(new DrawingRectangle(left, top, bitmapSize.Width, bitmapSize.Height));
     }
 
     private void PlaceCenteredOnPrimaryScreen(DrawingSize bitmapSize)

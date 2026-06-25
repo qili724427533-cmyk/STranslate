@@ -28,7 +28,7 @@
     <PackageVersion Include="NHotkey.Wpf" Version="3.0.0" />
     <PackageVersion Include="ObservableCollections" Version="3.3.4" />
     <PackageVersion Include="PracticalToolkit.WPF" Version="1.0.4" />
-    <PackageVersion Include="ScreenGrab" Version="1.0.15" />
+    <PackageVersion Include="ScreenGrab" Version="1.0.16" />
     <PackageVersion Include="SemanticVersioning" Version="3.0.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
