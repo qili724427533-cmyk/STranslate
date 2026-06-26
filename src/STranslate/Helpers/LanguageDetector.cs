@@ -7,6 +7,21 @@ using System.Text.Json;
 namespace STranslate.Helpers;
 
 /// <summary>
+///     语种识别配置包。<see langword="null"/> 表示使用全局 <see cref="Settings"/> 配置。
+/// </summary>
+/// <param name="Detector">检测引擎类型。</param>
+/// <param name="LocalDetectorRate">本地识别中英字符比例阈值。</param>
+/// <param name="SourceLangIfAuto">自动识别失败/出错时的回退源语种。</param>
+/// <param name="FirstLanguage">目标=Auto 且源语种为其他语言时使用的目标语种。</param>
+/// <param name="SecondLanguage">目标=Auto 且源语种为第一语言时使用的目标语种。</param>
+public sealed record LangDetectOptions(
+    LanguageDetectorType Detector,
+    double LocalDetectorRate,
+    LangEnum SourceLangIfAuto,
+    LangEnum FirstLanguage,
+    LangEnum SecondLanguage);
+
+/// <summary>
 ///     <see href="https://github.com/pot-app/pot-desktop/blob/master/src/utils/lang_detect.js" />
 /// </summary>
 public class LanguageDetector
