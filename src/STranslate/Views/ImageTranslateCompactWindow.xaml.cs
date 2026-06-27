@@ -4,6 +4,7 @@ using STranslate.Helpers;
 using STranslate.ViewModels;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using Windows.Win32;
 using DrawingPoint = System.Drawing.Point;
@@ -86,8 +87,36 @@ public partial class ImageTranslateCompactWindow
 
     protected override void OnClosed(EventArgs e)
     {
+        // 主动拆解视觉树：移除 InfoBar、SnackbarContainer 等控件并清空 Content，
+        // 断开 WPF 静态 PropertyDescriptor._propertyMap 通过 PropertyChangeTracker
+        // 对窗口内部控件的锚定，避免已关闭窗口被静态缓存钉死无法 GC。
+        DetachVisualTree();
+
         _viewModel.Dispose();
         base.OnClosed(e);
+    }
+
+    /// <summary>
+    /// 拆解精简窗口视觉树并释放控件引用。
+    /// 精简窗口每次截图翻译都会新建并关闭，若不主动断开 InfoBar/SnackbarContainer 等
+    /// 控件与窗口的连接，WPF 属性描述符静态表会通过 PropertyChangeTracker 反向持有窗口，
+    /// 导致整窗（含 BitmapSource 原生帧缓冲）无法回收。
+    /// </summary>
+    private void DetachVisualTree()
+    {
+        if (Content is Panel panel)
+        {
+            // 清除每个子元素的数据上下文，断开控件到 VM 的引用
+            for (int i = panel.Children.Count - 1; i >= 0; i--)
+            {
+                panel.Children[i].ClearValue(FrameworkElement.DataContextProperty);
+            }
+            panel.Children.Clear();
+        }
+
+        // 解除数据上下文与内容，断开 VM ↔ 视图的双向引用
+        DataContext = null;
+        Content = null;
     }
 
     private void PlaceOnPhysicalBounds(DrawingRectangle bounds)
