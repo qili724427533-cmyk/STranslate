@@ -23,8 +23,8 @@ internal sealed record ImageTranslateTextOverlayPlan(
     internal const double MinFontSize = 6;
     internal const double MaxFontSize = 128;
 
-    /// <summary>多行渲染时行高相对字号的倍数（行高 = 字号 × 此倍数）。</summary>
-    internal const double MultilineLineHeightScale = 1.28;
+    /// <summary>多行字号拟合使用的紧凑行高倍数，优先让译文字号尽可能大。</summary>
+    internal const double MultilineLineHeightScale = 1.24;
 }
 
 internal enum ImageTranslateOverlayTheme
@@ -37,6 +37,8 @@ internal static class ImageTranslateTextOverlayLayout
 {
     private const double MultilineFontScale = 0.90;
     private const double SingleLineFontScale = 1.08;
+    private const double MinimumRegionFillRatio = 0.90;
+    private const double MultilineMaxLineHeightScale = 2.0;
     private const double HorizontalTextPadding = 1;
     private const double ExpandedSingleLineMaxLines = 3.2;
     private const double ExpandedSingleLineVerticalPaddingScale = 0.12;
@@ -58,15 +60,16 @@ internal static class ImageTranslateTextOverlayLayout
             ? Median(lineRects.Select(rect => rect.Height))
             : Math.Max(1, boundingRect.Height);
         var isMultiLine = lineRects.Count > 1;
+        var contentRect = CreateContentRect(boundingRect, lineRects);
         var textVerticalPadding = isMultiLine
             ? Math.Max(1, lineHeight * 0.03)
             : 0;
         var textRect = CreatePaddedRect(
-            boundingRect,
+            contentRect,
             HorizontalTextPadding,
             textVerticalPadding);
-        var eraseRects = CreateEraseRects(lineRects, boundingRect, lineHeight);
-        var textClipRect = CreateTextClipRect(boundingRect, eraseRects);
+        var eraseRects = CreateEraseRects(lineRects, contentRect, lineHeight);
+        var textClipRect = CreateTextClipRect(contentRect, eraseRects);
 
         var renderAsMultiLine = isMultiLine;
         var fitRect = isMultiLine
@@ -95,15 +98,18 @@ internal static class ImageTranslateTextOverlayLayout
         var overlayRect = textClipRect;
         var (overlayBackgroundColor, foregroundColor) = SelectOverlayColors(overlayTheme);
         var cornerRadius = Math.Clamp(lineHeight * 0.18, 3, 8);
+        var renderLineHeight = renderAsMultiLine
+            ? CreateRegionFillLineHeight(fontSize, fitRect, shouldTrim, measureText)
+            : 0;
 
         return new ImageTranslateTextOverlayPlan(
-            boundingRect,
+            contentRect,
             textRect,
             textClipRect,
             overlayRect,
             eraseRects,
             fontSize,
-            renderAsMultiLine ? fontSize * ImageTranslateTextOverlayPlan.MultilineLineHeightScale : 0,
+            renderLineHeight,
             renderAsMultiLine ? textRect.Height : double.PositiveInfinity,
             renderAsMultiLine ? 0 : 1,
             renderAsMultiLine,
@@ -111,6 +117,37 @@ internal static class ImageTranslateTextOverlayLayout
             foregroundColor,
             overlayBackgroundColor,
             cornerRadius);
+    }
+
+    private static double CreateRegionFillLineHeight(
+        double fontSize,
+        Rect fitRect,
+        bool shouldTrim,
+        Func<double, Rect, bool, Size> measureText)
+    {
+        var defaultLineHeight = fontSize * ImageTranslateTextOverlayPlan.MultilineLineHeightScale;
+        if (shouldTrim || defaultLineHeight <= 0 || fitRect.Height <= 0)
+            return defaultLineHeight;
+
+        var measuredHeight = measureText(fontSize, fitRect, true).Height;
+        var lineCount = Math.Max(1, (int)Math.Round(measuredHeight / defaultLineHeight));
+        if (lineCount < 3)
+            return defaultLineHeight;
+
+        var fillLineHeight = fitRect.Height * MinimumRegionFillRatio / lineCount;
+        return Math.Clamp(
+            fillLineHeight,
+            defaultLineHeight,
+            fontSize * MultilineMaxLineHeightScale);
+    }
+
+    private static Rect CreateContentRect(Rect boundingRect, IReadOnlyList<Rect> lineRects)
+    {
+        var contentRect = boundingRect;
+        foreach (var lineRect in lineRects)
+            contentRect.Union(lineRect);
+
+        return contentRect;
     }
 
     internal static string NormalizeOverlayText(string text)

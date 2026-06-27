@@ -241,7 +241,7 @@ internal static class ImageTranslateRenderer
         var textPosition = new Point(
             plan.TextRect.Left,
             plan.IsMultiLine
-                ? plan.TextRect.Top
+                ? plan.TextRect.Top + Math.Max(0, (plan.TextRect.Height - formattedText.Height) / 2)
                 : plan.TextClipRect.Top + Math.Max(0, (plan.TextClipRect.Height - formattedText.Height) / 2)
         );
 
