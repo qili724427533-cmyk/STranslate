@@ -38,7 +38,7 @@
     <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.1" />
     <PackageVersion Include="Velopack" Version="0.0.1298" />
     <PackageVersion Include="WebDav.Client" Version="2.9.0" />
-    <PackageVersion Include="WeChatOcr" Version="1.0.4" />
+    <PackageVersion Include="WeChatOcr" Version="1.0.5" />
     <PackageVersion Include="WpfMath" Version="2.1.0" />
     <PackageVersion Include="XamlFlair.WPF" Version="1.2.13" />
     <PackageVersion Include="xunit" Version="2.9.3" />
