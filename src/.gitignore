@@ -18,6 +18,8 @@
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
+!.agents/skills/release/
+!.agents/skills/release/**
 [Rr]eleases/
 x64/
 x86/
