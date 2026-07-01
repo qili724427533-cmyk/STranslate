@@ -18,11 +18,9 @@
 - `STranslate/Views/SettingsWindow.xaml.cs`
   - `Navigate()`：设置页导航入口与导航状态同步。
 - `STranslate/Helpers/Win32Helper.cs`
-  - `SetForegroundWindow()`：统一的强制前台入口，通过 `AttachThreadInput` 处理 Windows 前台锁限制。
+  - `SetForegroundWindow()`：统一的窗口置前入口。先按系统前台规则直接尝试；失败后再通过 `AttachThreadInput` 强制置前，兼顾后台触发场景的兼容性与主动触发场景的稳定性。
 - `STranslate/Helpers/SingletonWindowOpener.cs`
   - `Open()` / `OpenAsync()` / `OpenPreparedAsync()`：新建或复用单实例窗口，并统一恢复、显示、置前和聚焦。
-- `STranslate/Helpers/ForegroundActivationRecovery.cs`
-  - 主窗口强制激活后的回弹判定：区分来源窗口瞬时抢回前台与用户主动切换到其他窗口。
 - `STranslate/Views/WelcomeSetupWindow.xaml.cs`
   - 首次欢迎/快速配置向导：仅当启动前 `Settings.json`、`HotkeySettings.json`、`ServiceSettings.json` 三个配置文件都不存在时自动打开；也可从关于页手动打开。窗口使用小尺寸纵向分页，第 1 页提供紧凑欢迎说明和语言选择。
 - `STranslate/Core/AppMessageBox.cs`
@@ -70,18 +68,18 @@
 ### 从入口到结果：窗口显示与前台激活
 1. 主窗口显示统一进入 `MainWindowViewModel.Show()`；设置、历史、OCR、图片翻译及手动欢迎向导等单实例窗口统一经 `SingletonWindowOpener` 新建或复用；启动期欢迎向导与临时 MessageBox owner 直接显示后也使用同一前台帮助方法。
 2. `SingletonWindowOpener` 先恢复最小化窗口，必要时设置主题并调用 `Show()`；主窗口则先恢复可见性、布局约束与位置。
-3. 两条路径都无条件调用 `Win32Helper.SetForegroundWindow()`，不区分手动热键、后台服务或外部调用来源，也不传递激活模式参数。
-4. `SetForegroundWindow()` 在目标窗口不是前台窗口时，将当前线程临时挂接到前台窗口线程，调用 Win32 `SetForegroundWindow`，恢复最小化窗口，并在失败时用 `BringWindowToTop` 兜底，最后解除线程挂接。
-5. Win32 激活后继续调用 WPF `Activate()`；单实例窗口还会调用 `Focus()`，保证新建窗口和已存在窗口使用相同的前台语义。
-6. 主窗口显示前会记录来源前台窗口，并启动短暂的激活恢复事务；100ms 后若来源窗口抢回前台则只重试一次，若用户已切换到其他窗口则结束事务并按 `HideWhenDeactivated` 处理。
+3. 两条路径都统一调用 `Win32Helper.SetForegroundWindow()`，不区分手动热键、后台服务或外部调用来源，也不传递激活模式参数。
+4. `SetForegroundWindow()` 采用两阶段策略：首先直接调用 Win32 `SetForegroundWindow`，尊重 Windows 前台权限规则；若失败且目标窗口与前台窗口属于不同线程，则临时挂接前台线程输入队列后再次尝试，最后恢复最小化窗口并在仍失败时用 `BringWindowToTop` 兜底。
+5. Win32 置前后继续调用 WPF `Activate()`；单实例窗口还会调用 `Focus()`，保证新建窗口和已存在窗口使用相同的前台语义。
+6. 主窗口 `OnDeactivated()` 按 `HideWhenDeactivated` 决定是否自动隐藏；置顶窗口不受此逻辑影响。
 
 ### 窗口生命周期要点
 - `MainWindow`：
   - `OnLoaded()` 会按 `HideOnStartup` 计算窗口位置并挂接窗口过程钩子。
   - `OnContentRendered()` 决定首次显示或隐藏。
   - `OnDeactivated()` 可按 `HideWhenDeactivated` 自动隐藏，避免 Alt-Tab 残留。
-  - 前台激活与失焦隐藏是两条独立链路，通过激活恢复事务协调 Explorer 文件重命名等来源窗口瞬时抢回前台的场景，不通过弱化部分入口的前台激活规避。
-  - 强制显示后进入短暂的前台激活事务：原窗口瞬时抢回前台时暂缓自动隐藏并仅重试一次；用户切到其他窗口时仍按设置隐藏，连续回弹则停止争抢但保持窗口可见。
+  - 前台激活与失焦隐藏是两条独立链路；`HideWhenDeactivated` 决定是否隐藏，置顶窗口不会触发隐藏。
+  - `Win32Helper.SetForegroundWindow()` 的两阶段策略可在多数后台触发场景（如鼠标划词）下避免强制抢夺焦点，从而减少打断 Explorer 文件重命名等文本编辑操作的概率，但无法在所有场景下完全避免。
 - `SettingsWindow`：
   - `Navigate(tag)` 根据页面类型从 DI 取页实例并注入到 `RootFrame.Content`；页面及页面 VM 为 `Scoped` 注册，统一从窗口独有的 `IServiceScope` 解析。
   - `Ctrl+F` 由 `OnKeyDown` 路由到当前页面的搜索框。
@@ -117,8 +115,6 @@
 - `STranslate/Views/SettingsWindow.xaml.cs`
 - `STranslate/Helpers/Win32Helper.cs`
 - `STranslate/Helpers/SingletonWindowOpener.cs`
-- `STranslate/Helpers/ForegroundActivationRecovery.cs`
-- `Tests/STranslate.Tests/ForegroundActivationRecoveryTests.cs`
 - `STranslate/Helpers/ModernWindowLifecycle.cs`
 - `STranslate/Core/AppMessageBox.cs`
 - `STranslate/Core/DataLocation.cs`
@@ -130,7 +126,7 @@
 - 增加全局异常策略：优先放到 `RegisterDispatcherUnhandledException` / `RegisterTaskSchedulerUnhandledException`。
 - 调整窗口初始行为：优先改 `MainWindow.OnContentRendered()` 与 `MainWindowViewModel.UpdatePosition()` 配合逻辑。
 - 调整窗口置前行为：统一修改 `Win32Helper.SetForegroundWindow()` 或调用方的显示时序；不要重新引入按触发来源区分的激活模式。
-- 调整主窗口激活回弹或失焦自动隐藏：同步检查 `ForegroundActivationRecovery`、`MainWindowViewModel.Show()`、`MainWindow.OnDeactivated()` 与 `HideWhenDeactivated`，并更新对应单元测试。
+- 调整主窗口失焦自动隐藏：同步检查 `MainWindowViewModel.Show()`、`MainWindow.OnDeactivated()` 与 `HideWhenDeactivated`。
 - 调整首次向导：优先改 `App` 中启动前配置文件存在性判断、主窗口创建时机和 `WelcomeSetupWindow`，避免用额外设置项控制是否已完成。
 - 设置页新增导航项：同步修改 `SettingsWindow.xaml` 菜单与 `SettingsWindow.xaml.cs` 的 `Navigate` 映射。
 - 新增阻断性弹窗：统一调用 `AppMessageBox.Show()`，保持活动窗口优先、透明 owner 兜底的策略。
