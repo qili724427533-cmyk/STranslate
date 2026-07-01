@@ -1,5 +1,9 @@
 Reference this package to develop a plugin for [STranslate](https://github.com/STranslate/STranslate).
 
+## v1.0.13 - 2026-07-01
+
+- `Service` 新增 `IconPath` 属性，支持为服务实例设置自定义图标路径（为空时回退 `MetaData.IconPath`）
+
 ## v1.0.12 - 2026-06-25
 
 - OCR 能力增强：`IOcrPlugin` 新增 `SupportBoxPoints()`（默认 `false`），声明是否返回图片像素坐标的文本框，图片翻译需要该能力
