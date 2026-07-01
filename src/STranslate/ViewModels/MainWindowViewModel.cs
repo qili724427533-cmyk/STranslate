@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
 using iNKORE.UI.WPF.Modern;
 using Microsoft.Extensions.Logging;
@@ -8,7 +7,6 @@ using STranslate.Helpers;
 using STranslate.Plugin;
 using STranslate.Resources;
 using STranslate.Services;
-using STranslate.ViewModels.Pages;
 using STranslate.Views;
 using STranslate.Views.Pages;
 using System.Collections.ObjectModel;
@@ -1901,15 +1899,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task NavigateAsync(Service service)
     {
-        await OpenSettingsInternalAsync(string.Empty);
+        var window = await OpenSettingsInternalAsync(string.Empty);
         await Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            Application.Current.Windows
-                    .OfType<SettingsWindow>()
-                    .First()
-                    .Navigate(nameof(TranslatePage));
-
-            Ioc.Default.GetRequiredService<TranslateViewModel>().SelectedItem = service;
+            window.Navigate(nameof(TranslatePage), selectedService: service);
         }, DispatcherPriority.Normal);
     }
 

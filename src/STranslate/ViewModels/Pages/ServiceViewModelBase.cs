@@ -7,10 +7,21 @@ using System.Windows.Controls;
 namespace STranslate.ViewModels.Pages;
 
 /// <summary>
+/// 支持选择待配置服务的页面 ViewModel。
+/// </summary>
+public interface IServiceSelectionViewModel
+{
+    /// <summary>
+    /// 获取或设置当前选中的服务实例。
+    /// </summary>
+    Service? SelectedItem { get; set; }
+}
+
+/// <summary>
 /// 服务 ViewModel 基类，提供通用的服务管理功能
 /// </summary>
 /// <typeparam name="T">服务实例类型</typeparam>
-public abstract partial class ServiceViewModelBase<T>(T service) : ObservableObject where T : BaseService
+public abstract partial class ServiceViewModelBase<T>(T service) : ObservableObject, IServiceSelectionViewModel where T : BaseService
 {
     public T Service { get; } = service;
 

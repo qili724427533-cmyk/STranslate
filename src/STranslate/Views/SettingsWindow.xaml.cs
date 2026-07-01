@@ -5,6 +5,7 @@ using STranslate.Core;
 using STranslate.Helpers;
 using STranslate.Plugin;
 using STranslate.ViewModels;
+using STranslate.ViewModels.Pages;
 using STranslate.Views.Pages;
 using System.ComponentModel;
 using System.Windows;
@@ -73,7 +74,13 @@ public partial class SettingsWindow
         Navigate(tag, false);
     }
 
-    public void Navigate(string tag, bool isCodeBehinde = true)
+    /// <summary>
+    /// 导航到指定设置页面，并可在服务页面中选中目标服务实例。
+    /// </summary>
+    /// <param name="tag">目标页面的导航标识。</param>
+    /// <param name="isCodeBehinde">是否同步更新左侧导航选中项。</param>
+    /// <param name="selectedService">需要在目标服务页面中选中的服务实例。</param>
+    public void Navigate(string tag, bool isCodeBehinde = true, Service? selectedService = null)
     {
         // Page 及其 Page VM 为 Scoped 注册，统一从窗口独有 scope 解析，
         // 关闭窗口时释放 scope 即可触发 Page VM 的 Dispose()。
@@ -125,7 +132,14 @@ public partial class SettingsWindow
         }
         ((INavigation)App.Current).IsNavigated = true;
         RootFrame.Content = content;
+        ApplySelectedService(content?.DataContext, selectedService);
         ((INavigation)App.Current).IsNavigated = false;
+    }
+
+    internal static void ApplySelectedService(object? dataContext, Service? selectedService)
+    {
+        if (selectedService is not null && dataContext is IServiceSelectionViewModel viewModel)
+            viewModel.SelectedItem = selectedService;
     }
 
     private void OnKeyDown(object _, KeyEventArgs e)

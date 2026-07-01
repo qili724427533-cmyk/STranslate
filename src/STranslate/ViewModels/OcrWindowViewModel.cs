@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -8,7 +7,6 @@ using STranslate.Core;
 using STranslate.Helpers;
 using STranslate.Plugin;
 using STranslate.Services;
-using STranslate.ViewModels.Pages;
 using STranslate.Views;
 using STranslate.Views.Pages;
 using System.Collections.ObjectModel;
@@ -430,24 +428,14 @@ public partial class OcrWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task OpenSettingsAsync()
     {
-        await _mainWindowViewModel.OpenSettingsInternalAsync(null);
+        var window = await _mainWindowViewModel.OpenSettingsInternalAsync(null);
 
         if (Keyboard.Modifiers == ModifierKeys.Control)
         {
-            Application.Current.Windows
-                .OfType<SettingsWindow>()
-                .First()
-                .Navigate(nameof(OcrPage));
-
-            if (SelectedOcrEngine != null)
-                Ioc.Default.GetRequiredService<OcrViewModel>()
-                    .SelectedItem = SelectedOcrEngine;
+            window.Navigate(nameof(OcrPage), selectedService: SelectedOcrEngine);
         }
         else
-            Application.Current.Windows
-                .OfType<SettingsWindow>()
-                .First()
-                .Navigate(nameof(StandalonePage));
+            window.Navigate(nameof(StandalonePage));
     }
 
     [RelayCommand]

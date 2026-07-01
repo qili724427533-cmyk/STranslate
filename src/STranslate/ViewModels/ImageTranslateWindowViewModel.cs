@@ -1,5 +1,4 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
 using iNKORE.UI.WPF.Modern;
 using Microsoft.Extensions.Logging;
@@ -9,7 +8,6 @@ using STranslate.Core;
 using STranslate.Helpers;
 using STranslate.Services;
 using STranslate.Plugin;
-using STranslate.ViewModels.Pages;
 using STranslate.Views;
 using STranslate.Views.Pages;
 using System.Collections.ObjectModel;
@@ -307,35 +305,18 @@ public partial class ImageTranslateWindowViewModel : ObservableObject, IDisposab
     [RelayCommand]
     private async Task OpenSettingsAsync()
     {
-        await _mainWindowViewModel.OpenSettingsInternalAsync(null);
+        var window = await _mainWindowViewModel.OpenSettingsInternalAsync(null);
 
         if (Keyboard.Modifiers == ModifierKeys.Control)
         {
-            Application.Current.Windows
-                .OfType<SettingsWindow>()
-                .First()
-                .Navigate(nameof(OcrPage));
-
-            if (SelectedOcrEngine != null)
-                Ioc.Default.GetRequiredService<OcrViewModel>()
-                    .SelectedItem = SelectedOcrEngine;
+            window.Navigate(nameof(OcrPage), selectedService: SelectedOcrEngine);
         }
         else if (Keyboard.Modifiers == ModifierKeys.Alt)
         {
-            Application.Current.Windows
-                .OfType<SettingsWindow>()
-                .First()
-                .Navigate(nameof(TranslatePage));
-
-            if (SelectedTranslateEngine != null)
-                Ioc.Default.GetRequiredService<TranslateViewModel>()
-                    .SelectedItem = SelectedTranslateEngine;
+            window.Navigate(nameof(TranslatePage), selectedService: SelectedTranslateEngine);
         }
         else
-            Application.Current.Windows
-                .OfType<SettingsWindow>()
-                .First()
-                .Navigate(nameof(StandalonePage));
+            window.Navigate(nameof(StandalonePage));
     }
 
     [RelayCommand]
