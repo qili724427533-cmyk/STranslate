@@ -11,6 +11,7 @@
 | `zh-tw` | 中文（繁体） | |
 | `ja` | 日本語 | |
 | `ko` | 한국어 | |
+| `tr` | Türkçe | |
 
 语言代码沿用 [VS Code 命名习惯](https://code.visualstudio.com/docs/getstarted/locales)（小写、连字符分隔，如 `zh-cn`、`pt-br`）。
 
@@ -175,7 +176,7 @@ internal static class AvailableLanguages
 > ⚠️ **`GetSystemTranslation` 的 switch 分支最容易被遗漏。** 漏掉的话，语言下拉里「跟随系统」选项在新语言下会显示英文 "System"。
 
 ### 第 3 步：插件语言文件
-为**每个**官方插件补齐法语文件（当前共 19 个插件目录，见 `src/Plugins/`）：
+为**每个**官方插件补齐法语文件（当前共 21 个插件目录，见 `src/Plugins/`）：
 - 对每个插件的 `Languages/` 目录，复制 `en.xaml` → `fr.xaml` 并翻译，复制 `en.json` → `fr.json` 并翻译。
 - 不补不会报错，但对应插件界面会回退英文，体验割裂。
 
