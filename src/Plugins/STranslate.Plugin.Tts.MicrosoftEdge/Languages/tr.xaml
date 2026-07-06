@@ -1,4 +1,3 @@
-```xml id="v8q3mk"
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -18,4 +17,3 @@
     <sys:String x:Key="STranslate_Plugin_Tts_MicrosoftEdge_Support_Description">Bu eklenti aşağıdaki açık kaynak projeye dayanmaktadır. Orijinal proje geliştiricisini desteklemek için bağlantıya tıklayın.</sys:String>
 
 </ResourceDictionary>
-```

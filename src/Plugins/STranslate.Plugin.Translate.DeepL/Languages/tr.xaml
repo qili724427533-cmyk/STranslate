@@ -1,4 +1,3 @@
-```xml
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -20,4 +19,3 @@
     <sys:String x:Key="STranslate_Plugin_Translate_DeepL_Query_Error2">Kullanım limiti boş.</sys:String>
 
 </ResourceDictionary>
-```

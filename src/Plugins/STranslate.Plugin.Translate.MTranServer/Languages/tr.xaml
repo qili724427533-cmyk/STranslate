@@ -1,4 +1,3 @@
-```xml id="y4n8kp"
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -7,4 +6,3 @@
     <sys:String x:Key="STranslate_Plugin_Translate_MTranServer_Url">URL</sys:String>
 
 </ResourceDictionary>
-```

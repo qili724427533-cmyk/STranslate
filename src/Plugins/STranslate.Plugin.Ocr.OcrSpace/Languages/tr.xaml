@@ -1,4 +1,3 @@
-```xml id="kt9p3v"
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -10,4 +9,3 @@
     <sys:String x:Key="STranslate_Plugin_Ocr_OcrSpace_Official_Description">Kayıt olmak ve ücretsiz bir API anahtarı almak için aşağıdaki bağlantıya tıklayarak resmî web sitesine gidin.</sys:String>
 
 </ResourceDictionary>
-```

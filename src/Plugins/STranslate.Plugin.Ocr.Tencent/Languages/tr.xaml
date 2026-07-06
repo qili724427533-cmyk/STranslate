@@ -1,4 +1,3 @@
-```xml id="f8q2mw"
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -12,4 +11,3 @@
     <sys:String x:Key="STranslate_Plugin_Ocr_Tencent_Official_Description">Kayıt olmak ve kullanmaya başlamak için aşağıdaki bağlantıya tıklayarak resmî web sitesine gidin.</sys:String>
 
 </ResourceDictionary>
-```
