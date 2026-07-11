@@ -46,7 +46,11 @@ public partial class SettingsWindow
         base.OnClosing(e);
 
         if (!e.Cancel)
-            ModernWindowLifecycle.DetachModernWindowStyle(this);
+        {
+            RunWithNavigationProtection(
+                (INavigation)App.Current,
+                () => ModernWindowLifecycle.DetachModernWindowStyle(this));
+        }
     }
 
     protected override void OnClosed(EventArgs e)
@@ -54,8 +58,13 @@ public partial class SettingsWindow
         // 先解绑导航事件并清空 Frame，再统一释放视觉树与 DI scope。
         // 释放 scope 会触发当前已解析 Page VM 的 Dispose()（HistoryViewModel 等）。
         RootNavigation.SelectionChanged -= OnNaviSelectionChanged;
-        RootFrame.Content = null;
-        ModernWindowLifecycle.Release(this, _serviceScope.Dispose);
+        RunWithNavigationProtection(
+            (INavigation)App.Current,
+            () =>
+            {
+                RootFrame.Content = null;
+                ModernWindowLifecycle.Release(this, _serviceScope.Dispose);
+            });
         base.OnClosed(e);
     }
 
@@ -130,10 +139,28 @@ public partial class SettingsWindow
                     break;
             }
         }
-        ((INavigation)App.Current).IsNavigated = true;
-        RootFrame.Content = content;
+        RunWithNavigationProtection(
+            (INavigation)App.Current,
+            () => RootFrame.Content = content);
         ApplySelectedService(content?.DataContext, selectedService);
-        ((INavigation)App.Current).IsNavigated = false;
+    }
+
+    /// <summary>
+    /// 在可能导致 PasswordBox 被 WPF 清空的视觉树变更期间启用导航保护，
+    /// 并在操作结束或抛出异常后恢复调用前的状态。
+    /// </summary>
+    internal static void RunWithNavigationProtection(INavigation navigation, Action action)
+    {
+        var originalState = navigation.IsNavigated;
+        navigation.IsNavigated = true;
+        try
+        {
+            action();
+        }
+        finally
+        {
+            navigation.IsNavigated = originalState;
+        }
     }
 
     internal static void ApplySelectedService(object? dataContext, Service? selectedService)

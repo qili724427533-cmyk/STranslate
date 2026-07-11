@@ -82,6 +82,7 @@
   - `Win32Helper.SetForegroundWindow()` 的两阶段策略可在多数后台触发场景（如鼠标划词）下避免强制抢夺焦点，从而减少打断 Explorer 文件重命名等文本编辑操作的概率，但无法在所有场景下完全避免。
 - `SettingsWindow`：
   - `Navigate(tag)` 根据页面类型从 DI 取页实例并注入到 `RootFrame.Content`；页面及页面 VM 为 `Scoped` 注册，统一从窗口独有的 `IServiceScope` 解析。
+  - 页面切换、`OnClosing` 模板拆除和 `OnClosed` 视觉树释放统一通过导航保护执行，确保 WPF 清空 `PasswordBox` 时不会把框架行为误判为用户清空密码；保护状态支持嵌套，并在异常路径恢复。
   - `Ctrl+F` 由 `OnKeyDown` 路由到当前页面的搜索框。
   - 窗口构造时 `Ioc.Default.CreateScope()` 建立独立 scope；`OnClosed` 先解绑导航事件、清空 `RootFrame.Content`，再经 `ModernWindowLifecycle.Release(this, _serviceScope.Dispose)` 拆除视觉树并释放 scope，触发已解析页面 VM（如 `HistoryViewModel`）的 `Dispose()` 取消全局订阅，避免 root scope 长期跟踪导致泄漏。
   - `OnClosing` 通过 `ModernWindowLifecycle.DetachModernWindowStyle()` 解除 iNKORE titlebar 的属性描述符监听；`OnClosed` 清空 `DataContext` 和内容树。

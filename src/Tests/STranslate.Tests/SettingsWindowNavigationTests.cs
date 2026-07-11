@@ -37,8 +37,61 @@ public class SettingsWindowNavigationTests
         Assert.Same(service, viewModel.SelectedItem);
     }
 
+    /// <summary>
+    /// 验证受保护操作执行期间会进入导航状态，并在结束后恢复原状态。
+    /// </summary>
+    [Fact]
+    public void RunWithNavigationProtectionSetsAndRestoresNavigationState()
+    {
+        var navigation = new TestNavigation();
+
+        SettingsWindow.RunWithNavigationProtection(
+            navigation,
+            () => Assert.True(navigation.IsNavigated));
+
+        Assert.False(navigation.IsNavigated);
+    }
+
+    /// <summary>
+    /// 验证导航保护支持嵌套调用，并保留调用前已经存在的导航状态。
+    /// </summary>
+    [Fact]
+    public void RunWithNavigationProtectionPreservesExistingStateWhenNested()
+    {
+        var navigation = new TestNavigation { IsNavigated = true };
+
+        SettingsWindow.RunWithNavigationProtection(
+            navigation,
+            () => SettingsWindow.RunWithNavigationProtection(
+                navigation,
+                () => Assert.True(navigation.IsNavigated)));
+
+        Assert.True(navigation.IsNavigated);
+    }
+
+    /// <summary>
+    /// 验证受保护操作抛出异常时仍会恢复导航状态。
+    /// </summary>
+    [Fact]
+    public void RunWithNavigationProtectionRestoresStateWhenActionThrows()
+    {
+        var navigation = new TestNavigation();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            SettingsWindow.RunWithNavigationProtection(
+                navigation,
+                () => throw new InvalidOperationException("test")));
+
+        Assert.False(navigation.IsNavigated);
+    }
+
     private sealed class TestServiceSelectionViewModel : IServiceSelectionViewModel
     {
         public Service? SelectedItem { get; set; }
+    }
+
+    private sealed class TestNavigation : INavigation
+    {
+        public bool IsNavigated { get; set; }
     }
 }
